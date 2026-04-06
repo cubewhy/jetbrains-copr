@@ -12,6 +12,12 @@
       "updated_at": "2026-04-06T21:34:20.065657Z",
       "version": "2026.1"
     },
+    "PCP:eap": {
+      "build": "261.22158.126",
+      "rpm_name": "jetbrains-pycharm-eap",
+      "updated_at": "2026-04-06T23:23:22.800356Z",
+      "version": "2026.1"
+    },
     "PCP:release": {
       "build": "261.22158.340",
       "rpm_name": "jetbrains-pycharm",
