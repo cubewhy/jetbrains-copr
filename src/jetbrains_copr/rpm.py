@@ -143,24 +143,28 @@ class RpmBuilder:
         """Build an SRPM from the rendered spec."""
 
         require_command("rpmbuild")
-        self._run_rpmbuild(["-bs", str(spec_path)], topdir=topdir)
-        built = list((topdir / "SRPMS").glob("*.src.rpm"))
+        resolved_topdir = topdir.resolve()
+        resolved_spec_path = spec_path.resolve()
+        self._run_rpmbuild(["-bs", str(resolved_spec_path)], topdir=resolved_topdir)
+        built = list((resolved_topdir / "SRPMS").glob("*.src.rpm"))
         if len(built) != 1:
-            raise PackagingError(f"Expected exactly one SRPM in {topdir / 'SRPMS'}, found {len(built)}.")
+            raise PackagingError(f"Expected exactly one SRPM in {resolved_topdir / 'SRPMS'}, found {len(built)}.")
         return built[0]
 
     def build_binary_rpm(self, *, spec_path: Path, topdir: Path, architecture: Architecture) -> Path:
         """Build a binary RPM for one target architecture."""
 
         require_command("rpmbuild")
+        resolved_topdir = topdir.resolve()
+        resolved_spec_path = spec_path.resolve()
         self._run_rpmbuild(
-            ["--target", architecture.rpm_target, "-bb", str(spec_path)],
-            topdir=topdir,
+            ["--target", architecture.rpm_target, "-bb", str(resolved_spec_path)],
+            topdir=resolved_topdir,
         )
-        built = list((topdir / "RPMS" / architecture.value).glob("*.rpm"))
+        built = list((resolved_topdir / "RPMS" / architecture.value).glob("*.rpm"))
         if len(built) != 1:
             raise PackagingError(
-                f"Expected exactly one {architecture.value} RPM in {topdir / 'RPMS' / architecture.value}, found {len(built)}."
+                f"Expected exactly one {architecture.value} RPM in {resolved_topdir / 'RPMS' / architecture.value}, found {len(built)}."
             )
         return built[0]
 
@@ -203,14 +207,15 @@ class RpmBuilder:
         )
 
     def _run_rpmbuild(self, arguments: list[str], *, topdir: Path) -> None:
-        ensure_directory(topdir / "BUILD")
-        ensure_directory(topdir / "BUILDROOT")
-        ensure_directory(topdir / "RPMS")
-        ensure_directory(topdir / "SOURCES")
-        ensure_directory(topdir / "SPECS")
-        ensure_directory(topdir / "SRPMS")
+        resolved_topdir = topdir.resolve()
+        ensure_directory(resolved_topdir / "BUILD")
+        ensure_directory(resolved_topdir / "BUILDROOT")
+        ensure_directory(resolved_topdir / "RPMS")
+        ensure_directory(resolved_topdir / "SOURCES")
+        ensure_directory(resolved_topdir / "SPECS")
+        ensure_directory(resolved_topdir / "SRPMS")
 
-        command = ["rpmbuild", "--define", f"_topdir {topdir}", *arguments]
+        command = ["rpmbuild", "--define", f"_topdir {resolved_topdir}", *arguments]
         completed = subprocess.run(
             command,
             capture_output=True,

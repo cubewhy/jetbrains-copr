@@ -4,6 +4,7 @@ from datetime import date
 import io
 from pathlib import Path
 import tarfile
+import subprocess
 
 import pytest
 
@@ -135,3 +136,25 @@ def test_real_spec_template_escapes_percent_sequences(tmp_path):
 
     assert "Exec=/usr/bin/jetbrains-idea-ultimate %%f" in rendered
     assert "find . -mindepth 1 -printf '/opt/jetbrains-idea-ultimate/%%P\\n'" in rendered
+
+
+def test_run_rpmbuild_uses_absolute_topdir(monkeypatch):
+    builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
+    captured: dict[str, object] = {}
+
+    def fake_ensure_directory(path):
+        return path
+
+    def fake_run(command, capture_output, text, check):
+        captured["command"] = command
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr("jetbrains_copr.rpm.ensure_directory", fake_ensure_directory)
+    monkeypatch.setattr("jetbrains_copr.rpm.subprocess.run", fake_run)
+
+    builder._run_rpmbuild(["-bb", "specfile.spec"], topdir=Path("relative-topdir"))
+
+    command = captured["command"]
+    assert command[0] == "rpmbuild"
+    assert command[1] == "--define"
+    assert command[2] == f"_topdir {Path('relative-topdir').resolve()}"
