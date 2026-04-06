@@ -1,5 +1,31 @@
 # jetbrains-copr
 
+Unofficial Copr for JetBrains IDEs
+
+## Usage
+
+## Use with dnf
+
+```shell
+sudo dnf copr enable cubewhy/jetbrains
+```
+
+Then you can install any IDEs you want
+
+```shell
+# For example:
+# sudo dnf install jetbrains-idea
+# sudo dnf install jetbrains-pycharm
+```
+
+You can find the IDE names at [config/products.json](https://github.com/cubewhy/jetbrains-copr/blob/master/config/products.json)
+
+## Download the RPM directly
+
+[GitHub releases](https://github.com/cubewhy/jetbrains-copr/releases)
+
+# Original AIGC README
+
 `jetbrains-copr` automates JetBrains Linux repackaging for COPR. It checks the JetBrains releases API for multiple configured products, downloads official Linux archives, verifies upstream checksums when available, builds RPMs for `x86_64` and `aarch64`, publishes binary RPMs to GitHub Releases, and submits an SRPM to the COPR project `cubewhy/jetbrains`.
 
 The project is intentionally config-driven and practical. It does not attempt native builds. It only repackages official upstream archives, which makes cross-architecture packaging feasible on a single CI runner.
