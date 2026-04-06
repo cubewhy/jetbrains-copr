@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+import logging
 import os
 import subprocess
 import tempfile
 
 from jetbrains_copr.errors import PublishingError, SetupError
 from jetbrains_copr.util import require_command, tail_lines
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class CoprPublisher:
@@ -23,6 +27,7 @@ class CoprPublisher:
 
         self.ensure_ready()
         config_path = self._resolve_config_path()
+        LOGGER.info("Running copr-cli build for %s using config %s", srpm_path.name, config_path)
 
         completed = subprocess.run(
             ["copr-cli", "--config", str(config_path), "build", project, str(srpm_path)],

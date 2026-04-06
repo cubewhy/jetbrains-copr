@@ -62,6 +62,7 @@ class GitHubReleasePublisher:
         try:
             release_exists = self._release_exists(repository, tag)
             if release_exists:
+                LOGGER.info("Updating GitHub Release %s in %s", tag, repository)
                 self._run(
                     [
                         "gh",
@@ -77,6 +78,7 @@ class GitHubReleasePublisher:
                     ]
                 )
             else:
+                LOGGER.info("Creating GitHub Release %s in %s", tag, repository)
                 self._run(
                     [
                         "gh",
@@ -93,6 +95,11 @@ class GitHubReleasePublisher:
                 )
 
             if uploadable_assets:
+                LOGGER.info(
+                    "Uploading GitHub Release assets for %s: %s",
+                    tag,
+                    ", ".join(asset.name for asset in uploadable_assets),
+                )
                 upload_command = [
                     "gh",
                     "release",

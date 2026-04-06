@@ -63,10 +63,16 @@ uv run jetbrains-copr build \
   --state state/versions.json \
   --output-dir dist \
   --root-dir work \
-  --jobs 2
+  --jobs 1 \
+  --cleanup-after-product
 ```
 
-`--jobs` parallelizes the heavy per-product build stage. Publishing to GitHub Releases, COPR submission, and state updates stay serialized so side effects remain deterministic. Start with `--jobs 2` on GitHub-hosted runners unless you have already measured higher safe concurrency for disk space and bandwidth.
+`--jobs` parallelizes the heavy per-product build stage. Publishing to GitHub Releases, COPR submission, and state updates stay serialized so side effects remain deterministic. On GitHub-hosted runners, start with `--jobs 1` and `--cleanup-after-product` because JetBrains archives are large enough to exhaust disk if you retain multiple products at once.
+
+If you run on a larger self-hosted machine, or you have measured enough free space on your runner, you can raise concurrency. For GitHub Actions:
+
+- Manual workflow: set the `jobs` input to `6`
+- Scheduled workflow: set the repository variable `JETBRAINS_COPR_JOBS=6`
 
 ## How To Configure Products
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concurrent.futures import Future, ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
 import logging
@@ -299,62 +299,26 @@ def run_build(
             skipped.append(evaluation.product.code)
     else:
         LOGGER.info("Running build stage with %d worker(s).", jobs)
-        build_results = _execute_parallel_builds(
+        if jobs > 1:
+            LOGGER.warning(
+                "Parallel build workers > 1 increase peak disk usage because multiple JetBrains archives and build trees exist at once."
+            )
+        log_disk_usage("Initial free space", root_dir)
+        _run_parallel_build_and_publish(
             buildable_evaluations=buildable_evaluations,
-            output_dir=output_dir,
-            root_dir=root_dir,
             jobs=jobs,
+            root_dir=root_dir,
+            output_dir=output_dir,
+            github_publisher=github_publisher,
+            github_repository=github_repository,
+            copr_publisher=copr_publisher,
+            copr_project=copr_project,
+            state=state,
+            state_path=state_path,
+            cleanup_after_product=cleanup_after_product,
+            successful=successful,
+            failed=failed,
         )
-
-        for evaluation in buildable_evaluations:
-            product = evaluation.product
-            product_label = f"{product.code} ({product.rpm_name})"
-            release = evaluation.release
-            if release is None:
-                failed.append(product.code)
-                continue
-
-            result = build_results.get(product.code)
-            if isinstance(result, Exception):
-                LOGGER.error("Product %s failed: %s", product_label, result)
-                failed.append(product.code)
-                continue
-            if result is None:
-                LOGGER.error("Product %s failed: build result was missing.", product_label)
-                failed.append(product.code)
-                continue
-
-            exported = result.exported
-
-            try:
-                if github_publisher is not None:
-                    if not github_repository:
-                        raise ConfigError(
-                            "GitHub Release publishing is enabled, but no GitHub repository was provided."
-                        )
-                    github_publisher.publish(
-                        repository=github_repository,
-                        tag=build_release_tag(product, release),
-                        title=f"{product.name} {release.version} ({release.build})",
-                        notes=build_release_notes(product, release, exported),
-                        assets=collect_release_assets(exported),
-                    )
-
-                if copr_publisher is not None:
-                    if exported.srpm_path is None:
-                        raise PackagingError("SRPM was not built, so COPR submission cannot continue.")
-                    copr_publisher.publish(project=copr_project, srpm_path=exported.srpm_path)
-
-                update_state_for_release(state, product, release)
-                save_state(state_path, state)
-                if cleanup_after_product:
-                    cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
-                successful.append(product.code)
-                LOGGER.info("Completed %s.", product_label)
-            except (PackagingError, PublishingError, SetupError, ConfigError) as exc:
-                LOGGER.error("Product %s failed: %s", product_label, exc)
-                failed.append(product.code)
-                continue
 
     if not successful and not failed:
         LOGGER.info("No updates found.")
@@ -366,38 +330,176 @@ def run_build(
     )
 
 
-def _execute_parallel_builds(
+def _run_parallel_build_and_publish(
     *,
     buildable_evaluations: list[ProductEvaluation],
-    output_dir: Path,
-    root_dir: Path,
     jobs: int,
-) -> dict[str, BuildExecutionResult | Exception]:
-    """Run the heavy build phase in parallel and collect results."""
+    root_dir: Path,
+    output_dir: Path,
+    github_publisher: GitHubReleasePublisher | None,
+    github_repository: str | None,
+    copr_publisher: CoprPublisher | None,
+    copr_project: str,
+    state,
+    state_path: Path,
+    cleanup_after_product: bool,
+    successful: list[str],
+    failed: list[str],
+) -> None:
+    """Run bounded parallel builds and publish each completed result immediately."""
 
-    max_workers = min(jobs, len(buildable_evaluations)) if buildable_evaluations else 1
-    results: dict[str, BuildExecutionResult | Exception] = {}
+    if not buildable_evaluations:
+        return
+
+    max_workers = min(jobs, len(buildable_evaluations))
+    pending: dict[Future[BuildExecutionResult], ProductEvaluation] = {}
+    evaluation_iter = iter(buildable_evaluations)
+
     with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="product-build") as executor:
-        future_map: dict[Future[BuildExecutionResult], ProductEvaluation] = {
-            executor.submit(
-                _build_product_artifacts,
-                evaluation=evaluation,
-                output_dir=output_dir,
-                root_dir=root_dir,
-            ): evaluation
-            for evaluation in buildable_evaluations
-        }
-        for future in as_completed(future_map):
-            evaluation = future_map[future]
-            try:
-                results[evaluation.product.code] = future.result()
-            except (PackagingError, SetupError, ConfigError) as exc:
-                results[evaluation.product.code] = exc
-            except Exception as exc:  # pragma: no cover - defensive guard
-                results[evaluation.product.code] = PackagingError(
-                    f"Unexpected build failure for {evaluation.product.code}: {exc}"
-                )
-    return results
+        for _ in range(max_workers):
+            evaluation = next(evaluation_iter, None)
+            if evaluation is None:
+                break
+            _submit_build(executor=executor, pending=pending, evaluation=evaluation, root_dir=root_dir, output_dir=output_dir)
+
+        while pending:
+            done, _ = wait(set(pending), return_when=FIRST_COMPLETED)
+            for future in done:
+                evaluation = pending.pop(future)
+                product = evaluation.product
+                product_label = f"{product.code} ({product.rpm_name})"
+                release = evaluation.release
+                if release is None:
+                    failed.append(product.code)
+                    continue
+
+                try:
+                    result = future.result()
+                    log_disk_usage(f"Built {product_label}, free space", root_dir)
+                except (PackagingError, SetupError, ConfigError) as exc:
+                    LOGGER.error("Product %s failed during build stage: %s", product_label, exc)
+                    if cleanup_after_product:
+                        cleanup_completed_product_paths(
+                            work_dir=product_work_dir(product=product, release=release, root_dir=root_dir),
+                            artifact_dir=product_artifact_dir(product=product, release=release, output_dir=output_dir),
+                        )
+                    failed.append(product.code)
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    LOGGER.error("Product %s failed during build stage: %s", product_label, exc)
+                    if cleanup_after_product:
+                        cleanup_completed_product_paths(
+                            work_dir=product_work_dir(product=product, release=release, root_dir=root_dir),
+                            artifact_dir=product_artifact_dir(product=product, release=release, output_dir=output_dir),
+                        )
+                    failed.append(product.code)
+                else:
+                    _publish_completed_result(
+                        result=result,
+                        github_publisher=github_publisher,
+                        github_repository=github_repository,
+                        copr_publisher=copr_publisher,
+                        copr_project=copr_project,
+                        state=state,
+                        state_path=state_path,
+                        cleanup_after_product=cleanup_after_product,
+                        successful=successful,
+                        failed=failed,
+                        root_dir=root_dir,
+                    )
+
+                next_evaluation = next(evaluation_iter, None)
+                if next_evaluation is not None:
+                    _submit_build(
+                        executor=executor,
+                        pending=pending,
+                        evaluation=next_evaluation,
+                        root_dir=root_dir,
+                        output_dir=output_dir,
+                    )
+
+
+def _submit_build(
+    *,
+    executor: ThreadPoolExecutor,
+    pending: dict[Future[BuildExecutionResult], ProductEvaluation],
+    evaluation: ProductEvaluation,
+    root_dir: Path,
+    output_dir: Path,
+) -> None:
+    """Submit one build task to the executor."""
+
+    future = executor.submit(
+        _build_product_artifacts,
+        evaluation=evaluation,
+        output_dir=output_dir,
+        root_dir=root_dir,
+    )
+    pending[future] = evaluation
+
+
+def _publish_completed_result(
+    *,
+    result: BuildExecutionResult,
+    github_publisher: GitHubReleasePublisher | None,
+    github_repository: str | None,
+    copr_publisher: CoprPublisher | None,
+    copr_project: str,
+    state,
+    state_path: Path,
+    cleanup_after_product: bool,
+    successful: list[str],
+    failed: list[str],
+    root_dir: Path,
+) -> None:
+    """Publish and finalize one completed build result."""
+
+    evaluation = result.evaluation
+    product = evaluation.product
+    product_label = f"{product.code} ({product.rpm_name})"
+    release = evaluation.release
+    if release is None:
+        failed.append(product.code)
+        return
+
+    exported = result.exported
+
+    try:
+        if github_publisher is not None:
+            if not github_repository:
+                raise ConfigError("GitHub Release publishing is enabled, but no GitHub repository was provided.")
+            release_assets = collect_release_assets(exported)
+            LOGGER.info(
+                "Publishing %s to GitHub Release with assets: %s",
+                product_label,
+                ", ".join(asset.name for asset in release_assets) or "none",
+            )
+            github_publisher.publish(
+                repository=github_repository,
+                tag=build_release_tag(product, release),
+                title=f"{product.name} {release.version} ({release.build})",
+                notes=build_release_notes(product, release, exported),
+                assets=release_assets,
+            )
+
+        if copr_publisher is not None:
+            if exported.srpm_path is None:
+                raise PackagingError("SRPM was not built, so COPR submission cannot continue.")
+            LOGGER.info("Submitting %s to COPR project %s", exported.srpm_path.name, copr_project)
+            copr_publisher.publish(project=copr_project, srpm_path=exported.srpm_path)
+
+        update_state_for_release(state, product, release)
+        save_state(state_path, state)
+        if cleanup_after_product:
+            cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
+            log_disk_usage(f"Cleaned {product_label}, free space", root_dir)
+        successful.append(product.code)
+        LOGGER.info("Completed %s.", product_label)
+    except (PackagingError, PublishingError, SetupError, ConfigError) as exc:
+        LOGGER.error("Product %s failed: %s", product_label, exc)
+        if cleanup_after_product:
+            cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
+            log_disk_usage(f"Cleaned failed {product_label}, free space", root_dir)
+        failed.append(product.code)
 
 
 def _render_dry_run_artifacts(
@@ -412,9 +514,10 @@ def _render_dry_run_artifacts(
     release = evaluation.release
     if release is None:
         raise PackagingError(f"No release metadata was available for {product.code}.")
+    product_label = f"{product.code} ({product.rpm_name})"
 
     builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
-    work_dir = root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+    work_dir = product_work_dir(product=product, release=release, root_dir=root_dir)
     topdir = work_dir / "rpmbuild"
     specs_dir = topdir / "SPECS"
     spec_path = specs_dir / f"{product.rpm_name}.spec"
@@ -437,6 +540,7 @@ def _render_dry_run_artifacts(
         binary_rpms={},
         output_dir=output_dir,
     )
+    LOGGER.info("Rendered dry-run artifacts for %s at %s", product_label, exported.artifact_dir)
     return BuildExecutionResult(evaluation=evaluation, exported=exported, work_dir=work_dir)
 
 
@@ -463,7 +567,7 @@ def _build_product_artifacts(
     )
 
     builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
-    work_dir = root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+    work_dir = product_work_dir(product=product, release=release, root_dir=root_dir)
     topdir = work_dir / "rpmbuild"
     sources_dir = topdir / "SOURCES"
     specs_dir = topdir / "SPECS"
@@ -515,6 +619,12 @@ def _build_product_artifacts(
         binary_rpms=binary_rpms,
         output_dir=output_dir,
     )
+    LOGGER.info(
+        "Built artifacts for %s at %s: %s",
+        product_label,
+        exported.artifact_dir,
+        ", ".join(path.name for path in collect_release_assets(exported)) or "no release assets",
+    )
     return BuildExecutionResult(evaluation=evaluation, exported=exported, work_dir=work_dir)
 
 
@@ -528,6 +638,34 @@ def cleanup_completed_product_paths(*, work_dir: Path, artifact_dir: Path) -> No
                 LOGGER.info("Cleaned %s", path)
         except OSError as exc:
             LOGGER.warning("Could not clean %s: %s", path, exc)
+
+
+def product_work_dir(*, product: ProductConfig, release: ReleaseInfo, root_dir: Path) -> Path:
+    """Return the per-product work directory."""
+
+    return root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+
+
+def product_artifact_dir(*, product: ProductConfig, release: ReleaseInfo, output_dir: Path) -> Path:
+    """Return the exported artifact directory for a product release."""
+
+    return output_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+
+
+def log_disk_usage(label: str, path: Path) -> None:
+    """Log free disk space for the filesystem containing the given path."""
+
+    probe = path
+    while not probe.exists() and probe != probe.parent:
+        probe = probe.parent
+    usage = shutil.disk_usage(probe)
+    LOGGER.info(
+        "%s: %.2f GiB free / %.2f GiB total at %s",
+        label,
+        usage.free / (1024**3),
+        usage.total / (1024**3),
+        probe,
+    )
 
 
 def select_products(products: list[ProductConfig], filters: list[str] | None) -> list[ProductConfig]:
