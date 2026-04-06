@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,7 @@ from jetbrains_copr.util import ensure_directory, sanitize_tag_component
 
 
 LOGGER = logging.getLogger(__name__)
+StateSyncCallback = Callable[[ProductConfig, ReleaseInfo], None]
 
 
 @dataclass(frozen=True)
@@ -232,6 +234,7 @@ def run_build(
     cleanup_after_product: bool = False,
     github_repository: str | None = None,
     copr_project: str = "cubewhy/jetbrains",
+    state_sync_callback: StateSyncCallback | None = None,
 ) -> BuildSummary:
     """Execute the build flow for every selected product."""
 
@@ -295,6 +298,11 @@ def run_build(
             if allow_dry_run_state_write and evaluation.release is not None:
                 update_state_for_release(state, evaluation.product, evaluation.release)
                 save_state(state_path, state)
+                _sync_state_update(
+                    state_sync_callback=state_sync_callback,
+                    product=evaluation.product,
+                    release=evaluation.release,
+                )
             if cleanup_after_product:
                 cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=result.exported.artifact_dir)
             skipped.append(evaluation.product.code)
@@ -316,6 +324,7 @@ def run_build(
             copr_project=copr_project,
             state=state,
             state_path=state_path,
+            state_sync_callback=state_sync_callback,
             cleanup_after_product=cleanup_after_product,
             successful=successful,
             failed=failed,
@@ -343,6 +352,7 @@ def _run_parallel_build_and_publish(
     copr_project: str,
     state,
     state_path: Path,
+    state_sync_callback: StateSyncCallback | None,
     cleanup_after_product: bool,
     successful: list[str],
     failed: list[str],
@@ -402,6 +412,7 @@ def _run_parallel_build_and_publish(
                         copr_project=copr_project,
                         state=state,
                         state_path=state_path,
+                        state_sync_callback=state_sync_callback,
                         cleanup_after_product=cleanup_after_product,
                         successful=successful,
                         failed=failed,
@@ -447,6 +458,7 @@ def _publish_completed_result(
     copr_project: str,
     state,
     state_path: Path,
+    state_sync_callback: StateSyncCallback | None,
     cleanup_after_product: bool,
     successful: list[str],
     failed: list[str],
@@ -490,6 +502,11 @@ def _publish_completed_result(
 
         update_state_for_release(state, product, release)
         save_state(state_path, state)
+        _sync_state_update(
+            state_sync_callback=state_sync_callback,
+            product=product,
+            release=release,
+        )
         if cleanup_after_product:
             cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
             log_disk_usage(f"Cleaned {product_label}, free space", root_dir)
@@ -501,6 +518,20 @@ def _publish_completed_result(
             cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
             log_disk_usage(f"Cleaned failed {product_label}, free space", root_dir)
         failed.append(product.code)
+
+
+def _sync_state_update(
+    *,
+    state_sync_callback: StateSyncCallback | None,
+    product: ProductConfig,
+    release: ReleaseInfo,
+) -> None:
+    """Run the optional post-save state sync hook."""
+
+    if state_sync_callback is None:
+        return
+    LOGGER.info("Synchronizing git state for %s after recording %s (%s).", product.identity, release.version, release.build)
+    state_sync_callback(product, release)
 
 
 def _render_dry_run_artifacts(

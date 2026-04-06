@@ -12,6 +12,7 @@ import typer
 from jetbrains_copr.errors import JetbrainsCoprError
 from jetbrains_copr.models import Architecture
 from jetbrains_copr.orchestrator import build_check_report, run_build
+from jetbrains_copr.repository import GitStateSynchronizer
 
 
 app = typer.Typer(help="JetBrains RPM repackaging and COPR automation.")
@@ -70,6 +71,11 @@ def build(
         "--cleanup-after-product",
         help="Remove per-product work and exported artifact directories after a successful end-to-end product flow.",
     ),
+    sync_state_to_git: bool = typer.Option(
+        False,
+        "--sync-state-to-git",
+        help="Commit and push the state file after each successful product state update.",
+    ),
     github_repository: str | None = typer.Option(
         None,
         "--github-repository",
@@ -81,6 +87,10 @@ def build(
     """Build packages and optionally publish them."""
 
     configure_logging()
+    state_sync_callback = None
+    if sync_state_to_git:
+        state_sync_callback = GitStateSynchronizer(state_path=state_path).sync
+
     try:
         summary = run_build(
             config_path=config_path,
@@ -98,6 +108,7 @@ def build(
             cleanup_after_product=cleanup_after_product,
             github_repository=github_repository or os.environ.get("GITHUB_REPOSITORY"),
             copr_project=copr_project,
+            state_sync_callback=state_sync_callback,
         )
     except JetbrainsCoprError as exc:
         raise typer.Exit(code=_print_error(exc))

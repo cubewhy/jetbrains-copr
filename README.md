@@ -96,6 +96,8 @@ uv run jetbrains-copr build \
 
 `--jobs` parallelizes the heavy per-product build stage. Publishing to GitHub Releases, COPR submission, and state updates stay serialized so side effects remain deterministic. On GitHub-hosted runners, start with `--jobs 1` and `--cleanup-after-product` because JetBrains archives are large enough to exhaust disk if you retain multiple products at once.
 
+If you also pass `--sync-state-to-git`, each successful state update is committed and pushed immediately instead of waiting for the full batch to finish.
+
 If you run on a larger self-hosted machine, or you have measured enough free space on your runner, you can raise concurrency. For GitHub Actions:
 
 - Manual workflow: set the `jobs` input to `6`
@@ -160,6 +162,8 @@ State is updated only after the full product flow succeeds:
 4. Optional COPR submission
 
 If one product fails, other products continue where possible, and only successful products are written back to state.
+
+When `--sync-state-to-git` is enabled, each successful state write is also committed and pushed right away.
 
 ## Required GitHub Secrets
 

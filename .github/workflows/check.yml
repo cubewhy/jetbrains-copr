@@ -50,6 +50,11 @@ jobs:
       - name: Run test suite
         run: uv run pytest
 
+      - name: Configure Git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Build and publish
         id: automation
         continue-on-error: true
@@ -63,21 +68,9 @@ jobs:
             --root-dir work \
             --jobs "${JETBRAINS_COPR_JOBS:-1}" \
             --cleanup-after-product \
+            --sync-state-to-git \
             --publish-release \
             --publish-copr
-
-      - name: Commit state updates
-        if: always()
-        continue-on-error: true
-        run: |
-          if git diff --quiet -- state/versions.json; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add state/versions.json
-          git commit -m "Update JetBrains release state"
-          git push
 
       - name: Fail job if automation failed
         if: steps.automation.outcome == 'failure'
