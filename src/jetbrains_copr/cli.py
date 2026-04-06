@@ -64,6 +64,7 @@ def build(
     dry_run: bool = typer.Option(False, "--dry-run"),
     allow_dry_run_state_write: bool = typer.Option(False, "--allow-dry-run-state-write"),
     force: bool = typer.Option(False, "--force"),
+    jobs: int = typer.Option(1, "--jobs", min=1, help="Parallel workers for the per-product build stage."),
     github_repository: str | None = typer.Option(
         None,
         "--github-repository",
@@ -88,6 +89,7 @@ def build(
             dry_run=dry_run,
             allow_dry_run_state_write=allow_dry_run_state_write,
             force=force,
+            jobs=jobs,
             github_repository=github_repository or os.environ.get("GITHUB_REPOSITORY"),
             copr_project=copr_project,
         )

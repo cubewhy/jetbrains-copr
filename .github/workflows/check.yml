@@ -58,6 +58,7 @@ jobs:
             --state state/versions.json \
             --output-dir dist \
             --root-dir work \
+            --jobs 2 \
             --publish-release \
             --publish-copr
 

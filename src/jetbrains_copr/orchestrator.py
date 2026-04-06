@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 import logging
@@ -46,6 +47,14 @@ class BuildSummary:
     @property
     def has_failures(self) -> bool:
         return bool(self.failed_products)
+
+
+@dataclass(frozen=True)
+class BuildExecutionResult:
+    """Result of the heavy per-product build stage."""
+
+    evaluation: ProductEvaluation
+    exported: BuildArtifacts
 
 
 def build_check_report(
@@ -216,10 +225,14 @@ def run_build(
     dry_run: bool = False,
     allow_dry_run_state_write: bool = False,
     force: bool = False,
+    jobs: int = 1,
     github_repository: str | None = None,
     copr_project: str = "cubewhy/jetbrains",
 ) -> BuildSummary:
     """Execute the build flow for every selected product."""
+
+    if jobs < 1:
+        raise ConfigError("--jobs must be at least 1.")
 
     if dry_run:
         publish_release = False
@@ -233,8 +246,6 @@ def run_build(
         force=force,
     )
     state = load_state(state_path)
-    builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
-
     github_publisher = GitHubReleasePublisher() if publish_release else None
     copr_publisher = CoprPublisher() if publish_copr else None
 
@@ -245,109 +256,72 @@ def run_build(
     ensure_directory(output_dir)
     ensure_directory(root_dir)
 
-    with RetryingHttpClient() as http_client:
-        for evaluation in evaluations:
+    buildable_evaluations: list[ProductEvaluation] = []
+    for evaluation in evaluations:
+        product = evaluation.product
+        product_label = f"{product.code} ({product.rpm_name})"
+
+        if evaluation.status == "error":
+            LOGGER.error("Skipping %s because update detection failed: %s", product_label, evaluation.reason)
+            failed.append(product.code)
+            continue
+
+        if not evaluation.needs_build:
+            LOGGER.info("Skipping %s: %s", product_label, evaluation.reason or evaluation.status)
+            skipped.append(product.code)
+            continue
+
+        release = evaluation.release
+        if release is None:
+            LOGGER.error("Skipping %s because no release metadata was available.", product_label)
+            failed.append(product.code)
+            continue
+
+        buildable_evaluations.append(evaluation)
+
+    if dry_run:
+        for evaluation in buildable_evaluations:
+            result = _render_dry_run_artifacts(evaluation=evaluation, output_dir=output_dir, root_dir=root_dir)
+            LOGGER.info(
+                "Dry-run rendered spec for %s (%s) at %s",
+                evaluation.product.code,
+                evaluation.product.rpm_name,
+                result.exported.spec_path,
+            )
+            if allow_dry_run_state_write and evaluation.release is not None:
+                update_state_for_release(state, evaluation.product, evaluation.release)
+                save_state(state_path, state)
+            skipped.append(evaluation.product.code)
+    else:
+        LOGGER.info("Running build stage with %d worker(s).", jobs)
+        build_results = _execute_parallel_builds(
+            buildable_evaluations=buildable_evaluations,
+            output_dir=output_dir,
+            root_dir=root_dir,
+            jobs=jobs,
+        )
+
+        for evaluation in buildable_evaluations:
             product = evaluation.product
             product_label = f"{product.code} ({product.rpm_name})"
-
-            if evaluation.status == "error":
-                LOGGER.error("Skipping %s because update detection failed: %s", product_label, evaluation.reason)
-                failed.append(product.code)
-                continue
-
-            if not evaluation.needs_build:
-                LOGGER.info("Skipping %s: %s", product_label, evaluation.reason or evaluation.status)
-                skipped.append(product.code)
-                continue
-
             release = evaluation.release
             if release is None:
-                LOGGER.error("Skipping %s because no release metadata was available.", product_label)
                 failed.append(product.code)
                 continue
 
-            LOGGER.info(
-                "Processing %s version %s build %s for architectures %s",
-                product_label,
-                release.version,
-                release.build,
-                ", ".join(arch.value for arch in evaluation.selected_architectures),
-            )
+            result = build_results.get(product.code)
+            if isinstance(result, Exception):
+                LOGGER.error("Product %s failed: %s", product_label, result)
+                failed.append(product.code)
+                continue
+            if result is None:
+                LOGGER.error("Product %s failed: build result was missing.", product_label)
+                failed.append(product.code)
+                continue
 
-            work_dir = root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
-            topdir = work_dir / "rpmbuild"
-            sources_dir = topdir / "SOURCES"
-            specs_dir = topdir / "SPECS"
-            spec_path = specs_dir / f"{product.rpm_name}.spec"
-
-            source_plan: dict[Architecture, str] = {
-                arch: builder.plan_source_name(product, arch, release.downloads[arch].link)
-                for arch in evaluation.selected_architectures
-            }
+            exported = result.exported
 
             try:
-                builder.render_spec(
-                    product=product,
-                    release=release,
-                    architectures=evaluation.selected_architectures,
-                    source_files=source_plan,
-                    destination=spec_path,
-                )
-
-                if dry_run:
-                    exported = builder.export_artifacts(
-                        product=product,
-                        release=release,
-                        spec_path=spec_path,
-                        srpm_path=None,
-                        binary_rpms={},
-                        output_dir=output_dir,
-                    )
-                    LOGGER.info("Dry-run rendered spec for %s at %s", product_label, exported.spec_path)
-                    if allow_dry_run_state_write:
-                        update_state_for_release(state, product, release)
-                        save_state(state_path, state)
-                    skipped.append(product.code)
-                    continue
-
-                prepared_sources = builder.prepare_sources(
-                    product=product,
-                    release=release,
-                    architectures=evaluation.selected_architectures,
-                    sources_dir=sources_dir,
-                    http_client=http_client,
-                )
-                for prepared in prepared_sources.values():
-                    target = sources_dir / prepared.archive_name
-                    if prepared.archive_path != target:
-                        target.write_bytes(prepared.archive_path.read_bytes())
-
-                builder.render_spec(
-                    product=product,
-                    release=release,
-                    architectures=evaluation.selected_architectures,
-                    source_files=prepared_sources,
-                    destination=spec_path,
-                )
-
-                srpm_path = builder.build_srpm(spec_path=spec_path, topdir=topdir)
-                binary_rpms = {
-                    architecture: builder.build_binary_rpm(
-                        spec_path=spec_path,
-                        topdir=topdir,
-                        architecture=architecture,
-                    )
-                    for architecture in evaluation.selected_architectures
-                }
-                exported = builder.export_artifacts(
-                    product=product,
-                    release=release,
-                    spec_path=spec_path,
-                    srpm_path=srpm_path,
-                    binary_rpms=binary_rpms,
-                    output_dir=output_dir,
-                )
-
                 if github_publisher is not None:
                     if not github_repository:
                         raise ConfigError(
@@ -383,6 +357,158 @@ def run_build(
         failed_products=failed,
         skipped_products=skipped,
     )
+
+
+def _execute_parallel_builds(
+    *,
+    buildable_evaluations: list[ProductEvaluation],
+    output_dir: Path,
+    root_dir: Path,
+    jobs: int,
+) -> dict[str, BuildExecutionResult | Exception]:
+    """Run the heavy build phase in parallel and collect results."""
+
+    max_workers = min(jobs, len(buildable_evaluations)) if buildable_evaluations else 1
+    results: dict[str, BuildExecutionResult | Exception] = {}
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="product-build") as executor:
+        future_map: dict[Future[BuildExecutionResult], ProductEvaluation] = {
+            executor.submit(
+                _build_product_artifacts,
+                evaluation=evaluation,
+                output_dir=output_dir,
+                root_dir=root_dir,
+            ): evaluation
+            for evaluation in buildable_evaluations
+        }
+        for future in as_completed(future_map):
+            evaluation = future_map[future]
+            try:
+                results[evaluation.product.code] = future.result()
+            except (PackagingError, SetupError, ConfigError) as exc:
+                results[evaluation.product.code] = exc
+            except Exception as exc:  # pragma: no cover - defensive guard
+                results[evaluation.product.code] = PackagingError(
+                    f"Unexpected build failure for {evaluation.product.code}: {exc}"
+                )
+    return results
+
+
+def _render_dry_run_artifacts(
+    *,
+    evaluation: ProductEvaluation,
+    output_dir: Path,
+    root_dir: Path,
+) -> BuildExecutionResult:
+    """Render dry-run artifacts without downloading sources or building RPMs."""
+
+    product = evaluation.product
+    release = evaluation.release
+    if release is None:
+        raise PackagingError(f"No release metadata was available for {product.code}.")
+
+    builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
+    work_dir = root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+    topdir = work_dir / "rpmbuild"
+    specs_dir = topdir / "SPECS"
+    spec_path = specs_dir / f"{product.rpm_name}.spec"
+    source_plan: dict[Architecture, str] = {
+        arch: builder.plan_source_name(product, arch, release.downloads[arch].link)
+        for arch in evaluation.selected_architectures
+    }
+    builder.render_spec(
+        product=product,
+        release=release,
+        architectures=evaluation.selected_architectures,
+        source_files=source_plan,
+        destination=spec_path,
+    )
+    exported = builder.export_artifacts(
+        product=product,
+        release=release,
+        spec_path=spec_path,
+        srpm_path=None,
+        binary_rpms={},
+        output_dir=output_dir,
+    )
+    return BuildExecutionResult(evaluation=evaluation, exported=exported)
+
+
+def _build_product_artifacts(
+    *,
+    evaluation: ProductEvaluation,
+    output_dir: Path,
+    root_dir: Path,
+) -> BuildExecutionResult:
+    """Build local artifacts for one product."""
+
+    product = evaluation.product
+    release = evaluation.release
+    if release is None:
+        raise PackagingError(f"No release metadata was available for {product.code}.")
+
+    product_label = f"{product.code} ({product.rpm_name})"
+    LOGGER.info(
+        "Processing %s version %s build %s for architectures %s",
+        product_label,
+        release.version,
+        release.build,
+        ", ".join(arch.value for arch in evaluation.selected_architectures),
+    )
+
+    builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
+    work_dir = root_dir / product.rpm_name / f"{sanitize_tag_component(release.version)}-{sanitize_tag_component(release.build)}"
+    topdir = work_dir / "rpmbuild"
+    sources_dir = topdir / "SOURCES"
+    specs_dir = topdir / "SPECS"
+    spec_path = specs_dir / f"{product.rpm_name}.spec"
+
+    source_plan: dict[Architecture, str] = {
+        arch: builder.plan_source_name(product, arch, release.downloads[arch].link)
+        for arch in evaluation.selected_architectures
+    }
+    builder.render_spec(
+        product=product,
+        release=release,
+        architectures=evaluation.selected_architectures,
+        source_files=source_plan,
+        destination=spec_path,
+    )
+
+    with RetryingHttpClient() as http_client:
+        prepared_sources = builder.prepare_sources(
+            product=product,
+            release=release,
+            architectures=evaluation.selected_architectures,
+            sources_dir=sources_dir,
+            http_client=http_client,
+        )
+
+    builder.render_spec(
+        product=product,
+        release=release,
+        architectures=evaluation.selected_architectures,
+        source_files=prepared_sources,
+        destination=spec_path,
+    )
+
+    srpm_path = builder.build_srpm(spec_path=spec_path, topdir=topdir)
+    binary_rpms = {
+        architecture: builder.build_binary_rpm(
+            spec_path=spec_path,
+            topdir=topdir,
+            architecture=architecture,
+        )
+        for architecture in evaluation.selected_architectures
+    }
+    exported = builder.export_artifacts(
+        product=product,
+        release=release,
+        spec_path=spec_path,
+        srpm_path=srpm_path,
+        binary_rpms=binary_rpms,
+        output_dir=output_dir,
+    )
+    return BuildExecutionResult(evaluation=evaluation, exported=exported)
 
 
 def select_products(products: list[ProductConfig], filters: list[str] | None) -> list[ProductConfig]:

@@ -49,6 +49,7 @@ uv run jetbrains-copr build \
   --state state/versions.json \
   --output-dir dist \
   --root-dir work \
+  --jobs 2 \
   --dry-run
 ```
 
@@ -61,8 +62,11 @@ uv run jetbrains-copr build \
   --config config/products.json \
   --state state/versions.json \
   --output-dir dist \
-  --root-dir work
+  --root-dir work \
+  --jobs 2
 ```
+
+`--jobs` parallelizes the heavy per-product build stage. Publishing to GitHub Releases, COPR submission, and state updates stay serialized so side effects remain deterministic. Start with `--jobs 2` on GitHub-hosted runners unless you have already measured higher safe concurrency for disk space and bandwidth.
 
 ## How To Configure Products
 

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from jetbrains_copr.errors import ConfigError
 from jetbrains_copr.models import Architecture
-from jetbrains_copr.orchestrator import collect_release_assets
+from jetbrains_copr.orchestrator import collect_release_assets, run_build
 from jetbrains_copr.rpm import BuildArtifacts
 
 
@@ -27,3 +30,17 @@ def test_collect_release_assets_excludes_srpm(tmp_path: Path):
     )
 
     assert collect_release_assets(artifacts) == [x86_rpm, aarch64_rpm]
+
+
+def test_run_build_rejects_invalid_jobs(tmp_path: Path):
+    with pytest.raises(ConfigError, match="--jobs"):
+        run_build(
+            config_path=tmp_path / "products.json",
+            state_path=tmp_path / "versions.json",
+            output_dir=tmp_path / "dist",
+            root_dir=tmp_path / "work",
+            publish_release=False,
+            publish_copr=False,
+            dry_run=True,
+            jobs=0,
+        )
