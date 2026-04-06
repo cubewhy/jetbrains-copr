@@ -31,6 +31,11 @@ on:
         required: true
         default: false
         type: boolean
+      jobs:
+        description: "Parallel build workers. Use 1 on GitHub-hosted runners unless you have validated disk headroom."
+        required: true
+        default: "1"
+        type: string
 
 permissions:
   contents: write
@@ -89,7 +94,8 @@ jobs:
             --state state/versions.json
             --output-dir dist
             --root-dir work
-            --jobs 6
+            --jobs "${{ inputs.jobs }}"
+            --cleanup-after-product
           )
 
           if [[ "${{ inputs.publish_release }}" == "true" ]]; then

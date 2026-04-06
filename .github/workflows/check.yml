@@ -16,6 +16,7 @@ jobs:
       COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
       COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
+      JETBRAINS_COPR_JOBS: ${{ vars.JETBRAINS_COPR_JOBS }}
       UV_LINK_MODE: copy
     steps:
       - name: Check out repository
@@ -52,13 +53,16 @@ jobs:
       - name: Build and publish
         id: automation
         continue-on-error: true
+        shell: bash
         run: |
+          set -euo pipefail
           uv run jetbrains-copr build \
             --config config/products.json \
             --state state/versions.json \
             --output-dir dist \
             --root-dir work \
-            --jobs 6 \
+            --jobs "${JETBRAINS_COPR_JOBS:-1}" \
+            --cleanup-after-product \
             --publish-release \
             --publish-copr
 

@@ -6,7 +6,7 @@ import pytest
 
 from jetbrains_copr.errors import ConfigError
 from jetbrains_copr.models import Architecture
-from jetbrains_copr.orchestrator import collect_release_assets, run_build
+from jetbrains_copr.orchestrator import cleanup_completed_product_paths, collect_release_assets, run_build
 from jetbrains_copr.rpm import BuildArtifacts
 
 
@@ -44,3 +44,17 @@ def test_run_build_rejects_invalid_jobs(tmp_path: Path):
             dry_run=True,
             jobs=0,
         )
+
+
+def test_cleanup_completed_product_paths_removes_work_and_artifacts(tmp_path: Path):
+    work_dir = tmp_path / "work" / "product"
+    artifact_dir = tmp_path / "dist" / "product"
+    work_dir.mkdir(parents=True)
+    artifact_dir.mkdir(parents=True)
+    (work_dir / "file.txt").write_text("x", encoding="utf-8")
+    (artifact_dir / "file.txt").write_text("x", encoding="utf-8")
+
+    cleanup_completed_product_paths(work_dir=work_dir, artifact_dir=artifact_dir)
+
+    assert not work_dir.exists()
+    assert not artifact_dir.exists()

@@ -6,6 +6,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 import logging
+import shutil
 
 from jetbrains_copr.config import load_products_config
 from jetbrains_copr.copr import CoprPublisher
@@ -55,6 +56,7 @@ class BuildExecutionResult:
 
     evaluation: ProductEvaluation
     exported: BuildArtifacts
+    work_dir: Path
 
 
 def build_check_report(
@@ -226,6 +228,7 @@ def run_build(
     allow_dry_run_state_write: bool = False,
     force: bool = False,
     jobs: int = 1,
+    cleanup_after_product: bool = False,
     github_repository: str | None = None,
     copr_project: str = "cubewhy/jetbrains",
 ) -> BuildSummary:
@@ -291,6 +294,8 @@ def run_build(
             if allow_dry_run_state_write and evaluation.release is not None:
                 update_state_for_release(state, evaluation.product, evaluation.release)
                 save_state(state_path, state)
+            if cleanup_after_product:
+                cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=result.exported.artifact_dir)
             skipped.append(evaluation.product.code)
     else:
         LOGGER.info("Running build stage with %d worker(s).", jobs)
@@ -342,6 +347,8 @@ def run_build(
 
                 update_state_for_release(state, product, release)
                 save_state(state_path, state)
+                if cleanup_after_product:
+                    cleanup_completed_product_paths(work_dir=result.work_dir, artifact_dir=exported.artifact_dir)
                 successful.append(product.code)
                 LOGGER.info("Completed %s.", product_label)
             except (PackagingError, PublishingError, SetupError, ConfigError) as exc:
@@ -430,7 +437,7 @@ def _render_dry_run_artifacts(
         binary_rpms={},
         output_dir=output_dir,
     )
-    return BuildExecutionResult(evaluation=evaluation, exported=exported)
+    return BuildExecutionResult(evaluation=evaluation, exported=exported, work_dir=work_dir)
 
 
 def _build_product_artifacts(
@@ -508,7 +515,19 @@ def _build_product_artifacts(
         binary_rpms=binary_rpms,
         output_dir=output_dir,
     )
-    return BuildExecutionResult(evaluation=evaluation, exported=exported)
+    return BuildExecutionResult(evaluation=evaluation, exported=exported, work_dir=work_dir)
+
+
+def cleanup_completed_product_paths(*, work_dir: Path, artifact_dir: Path) -> None:
+    """Delete per-product build directories after the product is fully processed."""
+
+    for path in [artifact_dir, work_dir]:
+        try:
+            if path.exists():
+                shutil.rmtree(path)
+                LOGGER.info("Cleaned %s", path)
+        except OSError as exc:
+            LOGGER.warning("Could not clean %s: %s", path, exc)
 
 
 def select_products(products: list[ProductConfig], filters: list[str] | None) -> list[ProductConfig]:
