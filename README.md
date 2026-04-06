@@ -1,6 +1,6 @@
 # jetbrains-copr
 
-`jetbrains-copr` automates JetBrains Linux repackaging for COPR. It checks the JetBrains releases API for multiple configured products, downloads official Linux archives, verifies upstream checksums when available, builds RPMs for `x86_64` and `aarch64`, publishes artifacts to GitHub Releases, and submits an SRPM to the COPR project `cubewhy/jetbrains`.
+`jetbrains-copr` automates JetBrains Linux repackaging for COPR. It checks the JetBrains releases API for multiple configured products, downloads official Linux archives, verifies upstream checksums when available, builds RPMs for `x86_64` and `aarch64`, publishes binary RPMs to GitHub Releases, and submits an SRPM to the COPR project `cubewhy/jetbrains`.
 
 The project is intentionally config-driven and practical. It does not attempt native builds. It only repackages official upstream archives, which makes cross-architecture packaging feasible on a single CI runner.
 
@@ -11,7 +11,7 @@ The project is intentionally config-driven and practical. It does not attempt na
 - Handles `x86_64` and `aarch64` independently based on upstream availability
 - Verifies upstream SHA256 checksums when JetBrains provides checksum URLs
 - Builds binary RPMs and an SRPM from a generated Jinja2 spec file
-- Publishes binary RPMs and SRPMs to deterministic GitHub Releases
+- Publishes binary RPMs to deterministic GitHub Releases
 - Submits the SRPM to COPR with `copr-cli`
 - Tracks processed versions in `state/versions.json`
 - Provides a local CLI for `check` and `build`
@@ -137,7 +137,7 @@ Scheduled or manual CI runs should provide:
 
 ## How COPR Submission Works
 
-The repository builds binary RPMs locally for direct download and also builds an SRPM from the same generated spec. When COPR publishing is enabled, the automation submits the SRPM to `cubewhy/jetbrains` with `copr-cli`.
+The repository builds binary RPMs locally for direct download and also builds an SRPM from the same generated spec. GitHub Releases receive binary RPMs only. When COPR publishing is enabled, the automation submits the SRPM to `cubewhy/jetbrains` with `copr-cli`.
 
 This avoids uploading prebuilt binary RPMs to COPR and matches normal COPR practice.
 

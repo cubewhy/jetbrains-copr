@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import logging
 import os
 import subprocess
 import tempfile
 
 from jetbrains_copr.errors import PublishingError, SetupError
 from jetbrains_copr.util import require_command, tail_lines
+
+
+LOGGER = logging.getLogger(__name__)
+GITHUB_RELEASE_ASSET_SIZE_LIMIT_BYTES = 2_147_483_648
 
 
 class GitHubReleasePublisher:
@@ -41,6 +46,15 @@ class GitHubReleasePublisher:
         """Create or update a release and upload assets."""
 
         self.ensure_ready()
+        uploadable_assets, skipped_assets = split_release_assets_by_size(assets)
+        for asset in skipped_assets:
+            LOGGER.warning(
+                "Skipping GitHub Release asset %s (%d bytes): GitHub rejects assets >= %d bytes.",
+                asset.name,
+                asset.stat().st_size,
+                GITHUB_RELEASE_ASSET_SIZE_LIMIT_BYTES,
+            )
+
         with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as handle:
             handle.write(notes)
             notes_file = Path(handle.name)
@@ -63,23 +77,22 @@ class GitHubReleasePublisher:
                     ]
                 )
             else:
-                command = [
-                    "gh",
-                    "release",
-                    "create",
-                    tag,
-                    "--repo",
-                    repository,
-                    "--title",
-                    title,
-                    "--notes-file",
-                    str(notes_file),
-                ]
-                command.extend(str(asset) for asset in assets)
-                self._run(command)
-                return
+                self._run(
+                    [
+                        "gh",
+                        "release",
+                        "create",
+                        tag,
+                        "--repo",
+                        repository,
+                        "--title",
+                        title,
+                        "--notes-file",
+                        str(notes_file),
+                    ]
+                )
 
-            if assets:
+            if uploadable_assets:
                 upload_command = [
                     "gh",
                     "release",
@@ -88,7 +101,7 @@ class GitHubReleasePublisher:
                     "--repo",
                     repository,
                     "--clobber",
-                    *(str(asset) for asset in assets),
+                    *(str(asset) for asset in uploadable_assets),
                 ]
                 self._run(upload_command)
         finally:
@@ -118,3 +131,16 @@ class GitHubReleasePublisher:
         if completed.returncode != 0:
             details = "\n".join(part for part in [tail_lines(completed.stdout), tail_lines(completed.stderr)] if part)
             raise PublishingError(f"GitHub Release command failed: {' '.join(command)}\n{details}")
+
+
+def split_release_assets_by_size(assets: list[Path]) -> tuple[list[Path], list[Path]]:
+    """Split assets into GitHub-uploadable and oversized groups."""
+
+    uploadable_assets: list[Path] = []
+    skipped_assets: list[Path] = []
+    for asset in assets:
+        if asset.stat().st_size >= GITHUB_RELEASE_ASSET_SIZE_LIMIT_BYTES:
+            skipped_assets.append(asset)
+        else:
+            uploadable_assets.append(asset)
+    return uploadable_assets, skipped_assets

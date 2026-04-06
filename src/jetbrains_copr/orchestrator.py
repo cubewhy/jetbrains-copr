@@ -449,15 +449,17 @@ def build_release_notes(product: ProductConfig, release: ReleaseInfo, artifacts:
 
 
 def collect_release_assets(artifacts: BuildArtifacts) -> list[Path]:
-    """Return release assets in a predictable order."""
+    """Return GitHub Release assets in a predictable order.
+
+    SRPMs are intentionally excluded. They are built for COPR submission, while
+    GitHub Releases are used for direct end-user RPM downloads.
+    """
 
     assets: list[Path] = []
     for architecture in ARCHITECTURE_ORDER:
         asset = artifacts.binary_rpms.get(architecture)
         if asset is not None:
             assets.append(asset)
-    if artifacts.srpm_path is not None:
-        assets.append(artifacts.srpm_path)
     return assets
 
 
