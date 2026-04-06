@@ -36,7 +36,12 @@ jobs:
       - name: Install system RPM tooling
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm copr-cli
+          sudo apt-get install -y rpm
+
+      - name: Install COPR CLI
+        run: |
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          uv tool install --python 3.12 "copr-cli==2.4"
 
       - name: Install Python dependencies
         run: uv sync --dev --locked
