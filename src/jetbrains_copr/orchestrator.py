@@ -16,7 +16,7 @@ from jetbrains_copr.http import RetryingHttpClient
 from jetbrains_copr.jetbrains_api import JetBrainsReleaseClient
 from jetbrains_copr.models import ARCHITECTURE_ORDER, Architecture, ProductConfig, ReleaseInfo, StateEntry
 from jetbrains_copr.rpm import BuildArtifacts, RpmBuilder
-from jetbrains_copr.state import load_state, release_matches_state, save_state, update_state_for_release
+from jetbrains_copr.state import load_state, release_matches_state, save_state, state_entry_for_product, update_state_for_release
 from jetbrains_copr.util import ensure_directory, sanitize_tag_component
 
 
@@ -80,6 +80,7 @@ def build_check_report(
         "products": [
             {
                 "code": evaluation.product.code,
+                "release_type": evaluation.product.release_type,
                 "name": evaluation.product.name,
                 "rpm_name": evaluation.product.rpm_name,
                 "enabled": evaluation.product.enabled,
@@ -122,7 +123,7 @@ def evaluate_products(
                         status="skipped",
                         reason="product is disabled in config",
                         release=None,
-                        state_entry=state.products.get(product.code),
+                        state_entry=state_entry_for_product(state, product),
                         available_architectures=[],
                         selected_architectures=[],
                         needs_build=False,
@@ -131,7 +132,7 @@ def evaluate_products(
                 continue
 
             try:
-                release = api_client.fetch_latest_release(product.code)
+                release = api_client.fetch_latest_release(product.code, release_type=product.release_type)
             except ApiError as exc:
                 evaluations.append(
                     ProductEvaluation(
@@ -139,7 +140,7 @@ def evaluate_products(
                         status="error",
                         reason=str(exc),
                         release=None,
-                        state_entry=state.products.get(product.code),
+                        state_entry=state_entry_for_product(state, product),
                         available_architectures=[],
                         selected_architectures=[],
                         needs_build=False,
@@ -154,7 +155,7 @@ def evaluate_products(
                         status="skipped",
                         reason="JetBrains API returned no releases for this product",
                         release=None,
-                        state_entry=state.products.get(product.code),
+                        state_entry=state_entry_for_product(state, product),
                         available_architectures=[],
                         selected_architectures=[],
                         needs_build=False,
@@ -170,7 +171,7 @@ def evaluate_products(
                         status="skipped",
                         reason="latest release has no Linux downloads",
                         release=release,
-                        state_entry=state.products.get(product.code),
+                        state_entry=state_entry_for_product(state, product),
                         available_architectures=[],
                         selected_architectures=[],
                         needs_build=False,
@@ -186,7 +187,7 @@ def evaluate_products(
                         status="skipped",
                         reason="requested architectures are not available for this release",
                         release=release,
-                        state_entry=state.products.get(product.code),
+                        state_entry=state_entry_for_product(state, product),
                         available_architectures=available,
                         selected_architectures=[],
                         needs_build=False,
@@ -194,7 +195,7 @@ def evaluate_products(
                 )
                 continue
 
-            already_processed = release_matches_state(state, release)
+            already_processed = release_matches_state(state, product, release)
             needs_build = force or not already_processed
             status = "update-available" if needs_build else "up-to-date"
             reason = "force rebuild requested" if force and already_processed else None
@@ -204,7 +205,7 @@ def evaluate_products(
                     status=status,
                     reason=reason,
                     release=release,
-                    state_entry=state.products.get(product.code),
+                    state_entry=state_entry_for_product(state, product),
                     available_architectures=available,
                     selected_architectures=selected,
                     needs_build=needs_build,
@@ -678,9 +679,15 @@ def select_products(products: list[ProductConfig], filters: list[str] | None) ->
     selected = [
         product
         for product in products
-        if product.code in normalized_filters or product.rpm_name in normalized_filters
+        if product.code in normalized_filters
+        or product.rpm_name in normalized_filters
+        or product.identity in normalized_filters
     ]
-    found_tokens = {product.code for product in selected} | {product.rpm_name for product in selected}
+    found_tokens = (
+        {product.code for product in selected}
+        | {product.rpm_name for product in selected}
+        | {product.identity for product in selected}
+    )
     missing = sorted(token for token in normalized_filters if token not in found_tokens)
     if missing:
         raise ConfigError(f"Unknown product filters: {', '.join(missing)}")
@@ -716,6 +723,7 @@ def build_release_notes(product: ProductConfig, release: ReleaseInfo, artifacts:
         "",
         f"- Version: `{release.version}`",
         f"- Build: `{release.build}`",
+        f"- Release type: `{product.release_type}`",
         f"- Release date: `{release.release_date.isoformat()}`",
         f"- Architectures: {', '.join(arch.value for arch in artifacts.binary_rpms)}",
         f"- RPM name: `{product.rpm_name}`",

@@ -33,6 +33,7 @@ The project is intentionally config-driven and practical. It does not attempt na
 ## Features
 
 - Detects updates for multiple JetBrains products from a JSON config file
+- Supports both stable `release` and `eap` channels per product
 - Supports explicit per-product metadata such as executable name, desktop file name, icon path, and StartupWMClass
 - Handles `x86_64` and `aarch64` independently based on upstream availability
 - Verifies upstream SHA256 checksums when JetBrains provides checksum URLs
@@ -107,6 +108,7 @@ Products live in [`config/products.json`](/mnt/data/dev/projects/jetbrains-copr/
 Each product entry supports:
 
 - `code`
+- `release_type`
 - `name`
 - `rpm_name`
 - `executable_name`
@@ -124,19 +126,22 @@ Example shape:
   "products": [
     {
       "code": "IIU",
-      "name": "IntelliJ IDEA Ultimate",
-      "rpm_name": "jetbrains-idea-ultimate",
+      "release_type": "eap",
+      "name": "IntelliJ IDEA EAP",
+      "rpm_name": "jetbrains-idea-eap",
       "executable_name": "idea",
-      "desktop_file_name": "jetbrains-idea-ultimate.desktop",
+      "desktop_file_name": "jetbrains-idea-eap.desktop",
       "icon_path": "bin/idea.png",
       "startup_wm_class": "jetbrains-idea",
-      "comment": "JetBrains IntelliJ IDEA Ultimate IDE",
+      "comment": "JetBrains IntelliJ IDEA EAP IDE",
       "categories": ["Development", "IDE", "Java", "Kotlin"],
       "enabled": true
     }
   ]
 }
 ```
+
+`release_type` is optional and defaults to `release`. Use `eap` to package JetBrains Early Access Program builds alongside stable packages. When filtering products on the CLI, you can target a specific variant with `--product <CODE>:<release_type>`, for example `--product WS:eap`.
 
 ## How State Tracking Works
 

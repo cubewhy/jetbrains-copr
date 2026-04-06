@@ -13,6 +13,19 @@
       "enabled": true
     },
     {
+      "code": "IIU",
+      "release_type": "eap",
+      "name": "IntelliJ IDEA EAP",
+      "rpm_name": "jetbrains-idea-eap",
+      "executable_name": "idea",
+      "desktop_file_name": "jetbrains-idea-eap.desktop",
+      "icon_path": "bin/idea.png",
+      "startup_wm_class": "jetbrains-idea",
+      "comment": "JetBrains IntelliJ IDEA EAP IDE",
+      "categories": ["Development", "IDE", "Java", "Kotlin"],
+      "enabled": true
+    },
+    {
       "code": "PCP",
       "name": "PyCharm",
       "rpm_name": "jetbrains-pycharm",
@@ -21,6 +34,19 @@
       "icon_path": "bin/pycharm.png",
       "startup_wm_class": "jetbrains-pycharm",
       "comment": "JetBrains PyCharm IDE",
+      "categories": ["Development", "IDE", "Python"],
+      "enabled": true
+    },
+    {
+      "code": "PCP",
+      "release_type": "eap",
+      "name": "PyCharm EAP",
+      "rpm_name": "jetbrains-pycharm-eap",
+      "executable_name": "pycharm",
+      "desktop_file_name": "jetbrains-pycharm-eap.desktop",
+      "icon_path": "bin/pycharm.png",
+      "startup_wm_class": "jetbrains-pycharm",
+      "comment": "JetBrains PyCharm EAP IDE",
       "categories": ["Development", "IDE", "Python"],
       "enabled": true
     },
@@ -37,6 +63,19 @@
       "enabled": true
     },
     {
+      "code": "GO",
+      "release_type": "eap",
+      "name": "GoLand EAP",
+      "rpm_name": "jetbrains-goland-eap",
+      "executable_name": "goland",
+      "desktop_file_name": "jetbrains-goland-eap.desktop",
+      "icon_path": "bin/goland.png",
+      "startup_wm_class": "jetbrains-goland",
+      "comment": "JetBrains GoLand EAP IDE",
+      "categories": ["Development", "IDE", "Go"],
+      "enabled": true
+    },
+    {
       "code": "CL",
       "name": "CLion",
       "rpm_name": "jetbrains-clion",
@@ -45,6 +84,19 @@
       "icon_path": "bin/clion.png",
       "startup_wm_class": "jetbrains-clion",
       "comment": "JetBrains CLion IDE",
+      "categories": ["Development", "IDE", "C", "C++"],
+      "enabled": true
+    },
+    {
+      "code": "CL",
+      "release_type": "eap",
+      "name": "CLion EAP",
+      "rpm_name": "jetbrains-clion-eap",
+      "executable_name": "clion",
+      "desktop_file_name": "jetbrains-clion-eap.desktop",
+      "icon_path": "bin/clion.png",
+      "startup_wm_class": "jetbrains-clion",
+      "comment": "JetBrains CLion EAP IDE",
       "categories": ["Development", "IDE", "C", "C++"],
       "enabled": true
     },
@@ -61,6 +113,19 @@
       "enabled": true
     },
     {
+      "code": "DG",
+      "release_type": "eap",
+      "name": "DataGrip EAP",
+      "rpm_name": "jetbrains-datagrip-eap",
+      "executable_name": "datagrip",
+      "desktop_file_name": "jetbrains-datagrip-eap.desktop",
+      "icon_path": "bin/datagrip.png",
+      "startup_wm_class": "jetbrains-datagrip",
+      "comment": "JetBrains DataGrip EAP IDE",
+      "categories": ["Development", "IDE", "Database"],
+      "enabled": true
+    },
+    {
       "code": "DS",
       "name": "DataSpell",
       "rpm_name": "jetbrains-dataspell",
@@ -69,6 +134,19 @@
       "icon_path": "bin/dataspell.png",
       "startup_wm_class": "jetbrains-dataspell",
       "comment": "JetBrains DataSpell IDE",
+      "categories": ["Development", "IDE", "Python", "Science"],
+      "enabled": true
+    },
+    {
+      "code": "DS",
+      "release_type": "eap",
+      "name": "DataSpell EAP",
+      "rpm_name": "jetbrains-dataspell-eap",
+      "executable_name": "dataspell",
+      "desktop_file_name": "jetbrains-dataspell-eap.desktop",
+      "icon_path": "bin/dataspell.png",
+      "startup_wm_class": "jetbrains-dataspell",
+      "comment": "JetBrains DataSpell EAP IDE",
       "categories": ["Development", "IDE", "Python", "Science"],
       "enabled": true
     },
@@ -85,6 +163,19 @@
       "enabled": true
     },
     {
+      "code": "PS",
+      "release_type": "eap",
+      "name": "PhpStorm EAP",
+      "rpm_name": "jetbrains-phpstorm-eap",
+      "executable_name": "phpstorm",
+      "desktop_file_name": "jetbrains-phpstorm-eap.desktop",
+      "icon_path": "bin/phpstorm.png",
+      "startup_wm_class": "jetbrains-phpstorm",
+      "comment": "JetBrains PhpStorm EAP IDE",
+      "categories": ["Development", "IDE", "PHP"],
+      "enabled": true
+    },
+    {
       "code": "RD",
       "name": "Rider",
       "rpm_name": "jetbrains-rider",
@@ -93,6 +184,19 @@
       "icon_path": "bin/rider.png",
       "startup_wm_class": "jetbrains-rider",
       "comment": "JetBrains Rider IDE",
+      "categories": ["Development", "IDE", "DotNet"],
+      "enabled": true
+    },
+    {
+      "code": "RD",
+      "release_type": "eap",
+      "name": "Rider EAP",
+      "rpm_name": "jetbrains-rider-eap",
+      "executable_name": "rider",
+      "desktop_file_name": "jetbrains-rider-eap.desktop",
+      "icon_path": "bin/rider.png",
+      "startup_wm_class": "jetbrains-rider",
+      "comment": "JetBrains Rider EAP IDE",
       "categories": ["Development", "IDE", "DotNet"],
       "enabled": true
     },
@@ -109,6 +213,19 @@
       "enabled": true
     },
     {
+      "code": "RM",
+      "release_type": "eap",
+      "name": "RubyMine EAP",
+      "rpm_name": "jetbrains-rubymine-eap",
+      "executable_name": "rubymine",
+      "desktop_file_name": "jetbrains-rubymine-eap.desktop",
+      "icon_path": "bin/rubymine.png",
+      "startup_wm_class": "jetbrains-rubymine",
+      "comment": "JetBrains RubyMine EAP IDE",
+      "categories": ["Development", "IDE", "Ruby"],
+      "enabled": true
+    },
+    {
       "code": "RR",
       "name": "RustRover",
       "rpm_name": "jetbrains-rustrover",
@@ -121,6 +238,19 @@
       "enabled": true
     },
     {
+      "code": "RR",
+      "release_type": "eap",
+      "name": "RustRover EAP",
+      "rpm_name": "jetbrains-rustrover-eap",
+      "executable_name": "rustrover",
+      "desktop_file_name": "jetbrains-rustrover-eap.desktop",
+      "icon_path": "bin/rustrover.png",
+      "startup_wm_class": "jetbrains-rustrover",
+      "comment": "JetBrains RustRover EAP IDE",
+      "categories": ["Development", "IDE", "Rust"],
+      "enabled": true
+    },
+    {
       "code": "WS",
       "name": "WebStorm",
       "rpm_name": "jetbrains-webstorm",
@@ -129,6 +259,19 @@
       "icon_path": "bin/webstorm.png",
       "startup_wm_class": "jetbrains-webstorm",
       "comment": "JetBrains WebStorm IDE",
+      "categories": ["Development", "IDE", "WebDevelopment", "JavaScript"],
+      "enabled": true
+    },
+    {
+      "code": "WS",
+      "release_type": "eap",
+      "name": "WebStorm EAP",
+      "rpm_name": "jetbrains-webstorm-eap",
+      "executable_name": "webstorm",
+      "desktop_file_name": "jetbrains-webstorm-eap.desktop",
+      "icon_path": "bin/webstorm.png",
+      "startup_wm_class": "jetbrains-webstorm",
+      "comment": "JetBrains WebStorm EAP IDE",
       "categories": ["Development", "IDE", "WebDevelopment", "JavaScript"],
       "enabled": true
     }

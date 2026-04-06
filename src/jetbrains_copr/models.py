@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from enum import StrEnum
 import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -39,6 +40,7 @@ class ProductConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     code: str = Field(min_length=1)
+    release_type: Literal["release", "eap"] = "release"
     name: str = Field(min_length=1)
     rpm_name: str = Field(min_length=1)
     executable_name: str = Field(min_length=1)
@@ -48,6 +50,12 @@ class ProductConfig(BaseModel):
     comment: str = Field(min_length=1)
     categories: list[str] = Field(min_length=1)
     enabled: bool = True
+
+    @property
+    def identity(self) -> str:
+        """Return a stable config identity for this product variant."""
+
+        return f"{self.code}:{self.release_type}"
 
     @field_validator(
         "code",
@@ -115,14 +123,14 @@ class ProductsConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_fields(self) -> "ProductsConfig":
-        codes: set[str] = set()
+        product_variants: set[str] = set()
         rpm_names: set[str] = set()
         for product in self.products:
-            if product.code in codes:
-                raise ValueError(f"duplicate product code: {product.code}")
+            if product.identity in product_variants:
+                raise ValueError(f"duplicate product code: {product.code} ({product.release_type})")
             if product.rpm_name in rpm_names:
                 raise ValueError(f"duplicate rpm_name: {product.rpm_name}")
-            codes.add(product.code)
+            product_variants.add(product.identity)
             rpm_names.add(product.rpm_name)
         return self
 

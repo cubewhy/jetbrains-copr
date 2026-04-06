@@ -29,6 +29,7 @@ Use a staged rollout instead of enabling everything at once.
 1. Add a new entry to [`config/products.json`](/mnt/data/dev/projects/jetbrains-copr/config/products.json).
 2. Verify:
    - correct JetBrains API `code`
+   - correct `release_type` (`release` or `eap`)
    - correct `executable_name`
    - correct `icon_path`
    - correct `startup_wm_class`
@@ -38,6 +39,8 @@ Use a staged rollout instead of enabling everything at once.
 uv run jetbrains-copr check --config config/products.json
 uv run jetbrains-copr build --config config/products.json --product <CODE> --dry-run
 ```
+
+If you configure both stable and EAP variants for the same product code, you can target one of them explicitly with `--product <CODE>:<release_type>`, for example `--product WS:eap`.
 
 4. If dry-run looks correct, run a real local build for that product.
 

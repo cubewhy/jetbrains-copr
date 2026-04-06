@@ -19,13 +19,13 @@ class JetBrainsReleaseClient:
     def __init__(self, http_client: RetryingHttpClient) -> None:
         self._http_client = http_client
 
-    def fetch_latest_release(self, product_code: str) -> ReleaseInfo | None:
+    def fetch_latest_release(self, product_code: str, *, release_type: str = "release") -> ReleaseInfo | None:
         payload = self._http_client.request_json(
             JETBRAINS_RELEASES_ENDPOINT,
             params={
                 "code": product_code,
                 "latest": "true",
-                "type": "release",
+                "type": release_type,
             },
         )
         return self.parse_latest_release(product_code, payload)

@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 
 from jetbrains_copr.errors import ConfigError
-from jetbrains_copr.models import Architecture
-from jetbrains_copr.orchestrator import cleanup_completed_product_paths, collect_release_assets, run_build
+from jetbrains_copr.models import Architecture, ProductConfig
+from jetbrains_copr.orchestrator import cleanup_completed_product_paths, collect_release_assets, run_build, select_products
 from jetbrains_copr.rpm import BuildArtifacts
 
 
@@ -58,3 +58,33 @@ def test_cleanup_completed_product_paths_removes_work_and_artifacts(tmp_path: Pa
 
     assert not work_dir.exists()
     assert not artifact_dir.exists()
+
+
+def test_select_products_accepts_variant_identity_filter():
+    stable = ProductConfig(
+        code="WS",
+        name="WebStorm",
+        rpm_name="jetbrains-webstorm",
+        executable_name="webstorm",
+        desktop_file_name="jetbrains-webstorm.desktop",
+        icon_path="bin/webstorm.png",
+        startup_wm_class="jetbrains-webstorm",
+        comment="JetBrains WebStorm IDE",
+        categories=["Development", "IDE"],
+    )
+    eap = ProductConfig(
+        code="WS",
+        release_type="eap",
+        name="WebStorm EAP",
+        rpm_name="jetbrains-webstorm-eap",
+        executable_name="webstorm",
+        desktop_file_name="jetbrains-webstorm-eap.desktop",
+        icon_path="bin/webstorm.png",
+        startup_wm_class="jetbrains-webstorm",
+        comment="JetBrains WebStorm EAP IDE",
+        categories=["Development", "IDE"],
+    )
+
+    selected = select_products([stable, eap], ["WS:eap"])
+
+    assert selected == [eap]

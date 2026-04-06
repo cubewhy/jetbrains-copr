@@ -46,10 +46,25 @@ def save_state(path: Path, state: StateFile) -> None:
     tmp_path.replace(path)
 
 
-def release_matches_state(state: StateFile, release: ReleaseInfo) -> bool:
+def state_entry_for_product(state: StateFile, product: ProductConfig) -> StateEntry | None:
+    """Return the saved state entry for a product variant.
+
+    Stable releases fall back to the legacy bare-code key so older state files
+    remain valid after introducing release channel support.
+    """
+
+    entry = state.products.get(product.identity)
+    if entry is not None:
+        return entry
+    if product.release_type == "release":
+        return state.products.get(product.code)
+    return None
+
+
+def release_matches_state(state: StateFile, product: ProductConfig, release: ReleaseInfo) -> bool:
     """Return True if the release is already marked as processed."""
 
-    entry = state.products.get(release.code)
+    entry = state_entry_for_product(state, product)
     if entry is None:
         return False
     return entry.version == release.version and entry.build == release.build
@@ -58,9 +73,11 @@ def release_matches_state(state: StateFile, release: ReleaseInfo) -> bool:
 def update_state_for_release(state: StateFile, product: ProductConfig, release: ReleaseInfo) -> None:
     """Record a successful build and publish for a product."""
 
-    state.products[product.code] = StateEntry(
+    state.products[product.identity] = StateEntry(
         version=release.version,
         build=release.build,
         rpm_name=product.rpm_name,
         updated_at=utcnow(),
     )
+    if product.release_type == "release":
+        state.products.pop(product.code, None)
