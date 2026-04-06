@@ -2,25 +2,25 @@
   "products": [
     {
       "code": "IIU",
-      "name": "IntelliJ IDEA Ultimate",
+      "name": "IntelliJ IDEA",
       "rpm_name": "jetbrains-idea",
       "executable_name": "idea",
-      "desktop_file_name": "jetbrains-idea-ultimate.desktop",
+      "desktop_file_name": "jetbrains-idea.desktop",
       "icon_path": "bin/idea.png",
       "startup_wm_class": "jetbrains-idea",
-      "comment": "JetBrains IntelliJ IDEA Ultimate IDE",
+      "comment": "JetBrains IntelliJ IDEA IDE",
       "categories": ["Development", "IDE", "Java", "Kotlin"],
       "enabled": true
     },
     {
       "code": "PCP",
-      "name": "PyCharm Professional",
+      "name": "PyCharm",
       "rpm_name": "jetbrains-pycharm",
       "executable_name": "pycharm",
-      "desktop_file_name": "jetbrains-pycharm-professional.desktop",
+      "desktop_file_name": "jetbrains-pycharm.desktop",
       "icon_path": "bin/pycharm.png",
       "startup_wm_class": "jetbrains-pycharm",
-      "comment": "JetBrains PyCharm Professional IDE",
+      "comment": "JetBrains PyCharm IDE",
       "categories": ["Development", "IDE", "Python"],
       "enabled": true
     },
