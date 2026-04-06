@@ -88,10 +88,10 @@ printf '/opt/{{ rpm_name }}\n' > %{manifest_path}
   cd %{buildroot}/opt/{{ rpm_name }}
   find . -mindepth 1 -printf '/opt/{{ rpm_name }}/%%P\n' | LC_ALL=C sort
 ) >> %{manifest_path}
-printf '%%{_bindir}/{{ rpm_name }}\n' >> %{manifest_path}
-printf '%%{_datadir}/applications/{{ desktop_file_name }}\n' >> %{manifest_path}
+printf '/usr/bin/{{ rpm_name }}\n' >> %{manifest_path}
+printf '/usr/share/applications/{{ desktop_file_name }}\n' >> %{manifest_path}
 if [ -f "%{buildroot}%{_datadir}/pixmaps/{{ rpm_name }}.png" ]; then
-  printf '%%{_datadir}/pixmaps/{{ rpm_name }}.png\n' >> %{manifest_path}
+  printf '/usr/share/pixmaps/{{ rpm_name }}.png\n' >> %{manifest_path}
 fi
 
 %files -f %{manifest_path}

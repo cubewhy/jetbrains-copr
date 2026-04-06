@@ -136,6 +136,8 @@ def test_real_spec_template_escapes_percent_sequences(tmp_path):
 
     assert "Exec=/usr/bin/jetbrains-idea-ultimate %%f" in rendered
     assert "find . -mindepth 1 -printf '/opt/jetbrains-idea-ultimate/%%P\\n'" in rendered
+    assert "printf '/usr/bin/jetbrains-idea-ultimate\\n' >> %{manifest_path}" in rendered
+    assert "printf '/usr/share/applications/jetbrains-idea-ultimate.desktop\\n' >> %{manifest_path}" in rendered
 
 
 def test_run_rpmbuild_uses_absolute_topdir(monkeypatch):
