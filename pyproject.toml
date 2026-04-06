@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jetbrains-copr"
+version = "0.1.0"
+description = "Detect JetBrains Linux updates, repackage them into RPMs, publish GitHub Releases, and submit SRPMs to COPR."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+  { name = "cubewhy" }
+]
+dependencies = [
+  "httpx>=0.27.0",
+  "jinja2>=3.1.4",
+  "pydantic>=2.8.2",
+  "typer>=0.12.3",
+]
+
+[project.scripts]
+jetbrains-copr = "jetbrains_copr.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jetbrains_copr"]

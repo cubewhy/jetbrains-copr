@@ -1,0 +1,52 @@
+{
+  "products": [
+    {
+      "code": "IIU",
+      "name": "IntelliJ IDEA Ultimate",
+      "rpm_name": "jetbrains-idea-ultimate",
+      "executable_name": "idea",
+      "desktop_file_name": "jetbrains-idea-ultimate.desktop",
+      "icon_path": "bin/idea.png",
+      "startup_wm_class": "jetbrains-idea",
+      "comment": "JetBrains IntelliJ IDEA Ultimate IDE",
+      "categories": ["Development", "IDE", "Java", "Kotlin"],
+      "enabled": true
+    },
+    {
+      "code": "PCP",
+      "name": "PyCharm Professional",
+      "rpm_name": "jetbrains-pycharm-professional",
+      "executable_name": "pycharm",
+      "desktop_file_name": "jetbrains-pycharm-professional.desktop",
+      "icon_path": "bin/pycharm.png",
+      "startup_wm_class": "jetbrains-pycharm",
+      "comment": "JetBrains PyCharm Professional IDE",
+      "categories": ["Development", "IDE", "Python"],
+      "enabled": true
+    },
+    {
+      "code": "GO",
+      "name": "GoLand",
+      "rpm_name": "jetbrains-goland",
+      "executable_name": "goland",
+      "desktop_file_name": "jetbrains-goland.desktop",
+      "icon_path": "bin/goland.png",
+      "startup_wm_class": "jetbrains-goland",
+      "comment": "JetBrains GoLand IDE",
+      "categories": ["Development", "IDE", "Go"],
+      "enabled": true
+    },
+    {
+      "code": "WS",
+      "name": "WebStorm",
+      "rpm_name": "jetbrains-webstorm",
+      "executable_name": "webstorm",
+      "desktop_file_name": "jetbrains-webstorm.desktop",
+      "icon_path": "bin/webstorm.png",
+      "startup_wm_class": "jetbrains-webstorm",
+      "comment": "JetBrains WebStorm IDE",
+      "categories": ["Development", "IDE", "WebDevelopment", "JavaScript"],
+      "enabled": true
+    }
+  ]
+}

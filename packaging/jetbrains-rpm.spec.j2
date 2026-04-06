@@ -1,0 +1,101 @@
+%global debug_package %{nil}
+%global __strip /bin/true
+%global __objdump /bin/true
+%global __os_install_post %{nil}
+%global _build_id_links none
+%undefine _missing_build_ids_terminate_build
+%global manifest_path %{_builddir}/{{ rpm_name }}.files
+
+Name:           {{ rpm_name }}
+Version:        {{ rpm_version }}
+Release:        {{ rpm_release }}
+Summary:        {{ comment }}
+
+License:        Proprietary
+URL:            https://www.jetbrains.com/
+ExclusiveArch:  {{ exclusive_arches | join(" ") }}
+AutoReqProv:    no
+{% if source_files.get("x86_64") -%}
+Source0:        {{ source_files["x86_64"]["archive_name"] }}
+{% endif -%}
+{% if source_files.get("aarch64") -%}
+Source10:       {{ source_files["aarch64"]["archive_name"] }}
+{% endif %}
+
+%description
+{{ name }} repackaged from the official JetBrains Linux archive.
+
+%prep
+rm -rf %{_builddir}/%{name}-%{version}
+mkdir -p %{_builddir}/%{name}-%{version}
+cd %{_builddir}/%{name}-%{version}
+{% if source_files.get("x86_64") -%}
+%ifarch x86_64
+tar -xzf %{SOURCE0} --strip-components=1
+%endif
+{% endif -%}
+{% if source_files.get("aarch64") -%}
+%ifarch aarch64
+tar -xzf %{SOURCE10} --strip-components=1
+%endif
+{% endif %}
+
+if [ ! -e "bin/{{ executable_name }}" ]; then
+  echo "Expected executable bin/{{ executable_name }} was not found after extracting the archive." >&2
+  exit 1
+fi
+
+%build
+
+%install
+rm -rf %{buildroot}
+install -d %{buildroot}/opt/{{ rpm_name }}
+cp -a %{_builddir}/%{name}-%{version}/. %{buildroot}/opt/{{ rpm_name }}/
+
+install -d %{buildroot}%{_bindir}
+cat > %{buildroot}%{_bindir}/{{ rpm_name }} <<'EOF'
+#!/bin/sh
+exec /opt/{{ rpm_name }}/bin/{{ executable_name }} "$@"
+EOF
+chmod 0755 %{buildroot}%{_bindir}/{{ rpm_name }}
+
+install -d %{buildroot}%{_datadir}/applications
+cat > %{buildroot}%{_datadir}/applications/{{ desktop_file_name }} <<'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name={{ name }}
+Exec=/usr/bin/{{ rpm_name }} %f
+Icon={{ rpm_name }}
+Terminal=false
+StartupNotify=true
+StartupWMClass={{ startup_wm_class }}
+Comment={{ comment }}
+Categories={{ categories_entry }}
+EOF
+chmod 0644 %{buildroot}%{_datadir}/applications/{{ desktop_file_name }}
+
+if [ -f "%{_builddir}/%{name}-%{version}/{{ icon_path }}" ]; then
+  install -d %{buildroot}%{_datadir}/pixmaps
+  install -m 0644 \
+    "%{_builddir}/%{name}-%{version}/{{ icon_path }}" \
+    "%{buildroot}%{_datadir}/pixmaps/{{ rpm_name }}.png"
+fi
+
+rm -f %{manifest_path}
+printf '/opt/{{ rpm_name }}\n' > %{manifest_path}
+(
+  cd %{buildroot}/opt/{{ rpm_name }}
+  find . -mindepth 1 -printf '/opt/{{ rpm_name }}/%P\n' | LC_ALL=C sort
+) >> %{manifest_path}
+printf '%%{_bindir}/{{ rpm_name }}\n' >> %{manifest_path}
+printf '%%{_datadir}/applications/{{ desktop_file_name }}\n' >> %{manifest_path}
+if [ -f "%{buildroot}%{_datadir}/pixmaps/{{ rpm_name }}.png" ]; then
+  printf '%%{_datadir}/pixmaps/{{ rpm_name }}.png\n' >> %{manifest_path}
+fi
+
+%files -f %{manifest_path}
+
+%changelog
+* {{ changelog_date }} cubewhy <qby140326@gmail.com> - {{ rpm_version }}-{{ rpm_release }}
+- Repackaged upstream JetBrains release

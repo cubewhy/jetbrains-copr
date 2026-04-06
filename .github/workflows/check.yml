@@ -1,0 +1,74 @@
+name: Scheduled Update Check
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
+      COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
+      COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      UV_LINK_MODE: copy
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install system RPM tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm copr-cli
+
+      - name: Install Python dependencies
+        run: uv sync --dev --locked
+
+      - name: Run test suite
+        run: uv run pytest
+
+      - name: Build and publish
+        id: automation
+        continue-on-error: true
+        run: |
+          uv run jetbrains-copr build \
+            --config config/products.json \
+            --state state/versions.json \
+            --output-dir dist \
+            --root-dir work \
+            --publish-release \
+            --publish-copr
+
+      - name: Commit state updates
+        if: always()
+        continue-on-error: true
+        run: |
+          if git diff --quiet -- state/versions.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add state/versions.json
+          git commit -m "Update JetBrains release state"
+          git push
+
+      - name: Fail job if automation failed
+        if: steps.automation.outcome == 'failure'
+        run: exit 1
