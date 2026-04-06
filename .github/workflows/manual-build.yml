@@ -89,7 +89,7 @@ jobs:
             --state state/versions.json
             --output-dir dist
             --root-dir work
-            --jobs 2
+            --jobs 6
           )
 
           if [[ "${{ inputs.publish_release }}" == "true" ]]; then
