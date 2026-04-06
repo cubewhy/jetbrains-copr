@@ -9,7 +9,7 @@ import subprocess
 import pytest
 
 from jetbrains_copr.models import Architecture, ProductConfig, ReleaseInfo
-from jetbrains_copr.rpm import RpmBuilder, extract_checksum_from_text, inspect_archive_layout
+from jetbrains_copr.rpm import RpmBuilder, extract_checksum_from_text, inspect_archive, inspect_archive_layout
 
 
 def _write_tar_gz(path, members):
@@ -58,6 +58,22 @@ def test_inspect_archive_layout_rejects_multiple_top_levels(tmp_path):
 
     with pytest.raises(Exception, match="one top-level directory"):
         inspect_archive_layout(archive_path, "idea")
+
+
+def test_inspect_archive_reports_optional_icon_presence(tmp_path):
+    archive_path = tmp_path / "idea.tar.gz"
+    _write_tar_gz(
+        archive_path,
+        {
+            "idea-IU-261/bin/idea.sh": "launcher",
+            "idea-IU-261/bin/idea.png": "icon",
+        },
+    )
+
+    inspection = inspect_archive(archive_path, "idea.sh", icon_path="bin/idea.png")
+
+    assert inspection.top_level == "idea-IU-261"
+    assert inspection.icon_present is True
 
 
 def test_render_spec_includes_selected_architectures(tmp_path):
@@ -135,9 +151,11 @@ def test_real_spec_template_escapes_percent_sequences(tmp_path):
     rendered = destination.read_text(encoding="utf-8")
 
     assert "Exec=/usr/bin/jetbrains-idea-ultimate %%f" in rendered
-    assert "find . -mindepth 1 -printf '/opt/jetbrains-idea-ultimate/%%P\\n'" in rendered
-    assert "printf '/usr/bin/jetbrains-idea-ultimate\\n' >> %{manifest_path}" in rendered
-    assert "printf '/usr/share/applications/jetbrains-idea-ultimate.desktop\\n' >> %{manifest_path}" in rendered
+    assert "%files" in rendered
+    assert "/opt/jetbrains-idea-ultimate" in rendered
+    assert "/usr/bin/jetbrains-idea-ultimate" in rendered
+    assert "/usr/share/applications/jetbrains-idea-ultimate.desktop" in rendered
+    assert "manifest_path" not in rendered
 
 
 def test_run_rpmbuild_uses_absolute_topdir(monkeypatch):

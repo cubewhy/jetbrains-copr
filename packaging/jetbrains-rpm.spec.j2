@@ -4,7 +4,6 @@
 %global __os_install_post %{nil}
 %global _build_id_links none
 %undefine _missing_build_ids_terminate_build
-%global manifest_path %{_builddir}/{{ rpm_name }}.files
 
 Name:           {{ rpm_name }}
 Version:        {{ rpm_version }}
@@ -82,19 +81,20 @@ if [ -f "%{_builddir}/%{name}-%{version}/{{ icon_path }}" ]; then
     "%{buildroot}%{_datadir}/pixmaps/{{ rpm_name }}.png"
 fi
 
-rm -f %{manifest_path}
-printf '/opt/{{ rpm_name }}\n' > %{manifest_path}
-(
-  cd %{buildroot}/opt/{{ rpm_name }}
-  find . -mindepth 1 -printf '/opt/{{ rpm_name }}/%%P\n' | LC_ALL=C sort
-) >> %{manifest_path}
-printf '/usr/bin/{{ rpm_name }}\n' >> %{manifest_path}
-printf '/usr/share/applications/{{ desktop_file_name }}\n' >> %{manifest_path}
-if [ -f "%{buildroot}%{_datadir}/pixmaps/{{ rpm_name }}.png" ]; then
-  printf '/usr/share/pixmaps/{{ rpm_name }}.png\n' >> %{manifest_path}
-fi
-
-%files -f %{manifest_path}
+%files
+/opt/{{ rpm_name }}
+/usr/bin/{{ rpm_name }}
+/usr/share/applications/{{ desktop_file_name }}
+{% if source_files.get("x86_64") and "x86_64" in icon_arches -%}
+%ifarch x86_64
+/usr/share/pixmaps/{{ rpm_name }}.png
+%endif
+{% endif -%}
+{% if source_files.get("aarch64") and "aarch64" in icon_arches -%}
+%ifarch aarch64
+/usr/share/pixmaps/{{ rpm_name }}.png
+%endif
+{% endif %}
 
 %changelog
 * {{ changelog_date }} cubewhy <qby140326@gmail.com> - {{ rpm_version }}-{{ rpm_release }}

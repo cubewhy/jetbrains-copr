@@ -30,6 +30,7 @@ class PreparedSource:
     archive_path: Path
     archive_name: str
     source_url: str
+    icon_present: bool
 
 
 @dataclass(frozen=True)
@@ -92,13 +93,18 @@ class RpmBuilder:
                 http_client.download_file(download.checksum_link, checksum_path)
                 verify_checksum_file(archive_path, checksum_path)
 
-            inspect_archive_layout(archive_path, product.executable_name)
+            inspection = inspect_archive(
+                archive_path,
+                product.executable_name,
+                icon_path=product.icon_path,
+            )
 
             prepared[architecture] = PreparedSource(
                 architecture=architecture,
                 archive_path=archive_path,
                 archive_name=archive_name,
                 source_url=download.link,
+                icon_present=inspection.icon_present,
             )
 
         return prepared
@@ -128,6 +134,7 @@ class RpmBuilder:
             categories_entry=";".join(product.categories) + ";",
             changelog_date=format_rpm_changelog_date(utcnow()),
             exclusive_arches=[arch.value for arch in architectures],
+            icon_arches=[arch.value for arch in architectures if _source_has_icon(source_files.get(arch))],
             source_files={
                 arch.value: {
                     "archive_name": value.archive_name if isinstance(value, PreparedSource) else value,
@@ -260,6 +267,25 @@ def verify_checksum_file(archive_path: Path, checksum_path: Path) -> None:
 def inspect_archive_layout(archive_path: Path, executable_name: str) -> str:
     """Validate the archive layout and required executable."""
 
+    return inspect_archive(archive_path, executable_name).top_level
+
+
+@dataclass(frozen=True)
+class ArchiveInspection:
+    """Archive validation result."""
+
+    top_level: str
+    icon_present: bool
+
+
+def inspect_archive(
+    archive_path: Path,
+    executable_name: str,
+    *,
+    icon_path: str | None = None,
+) -> ArchiveInspection:
+    """Validate the archive layout and detect optional icon presence."""
+
     try:
         with tarfile.open(archive_path, "r:gz") as archive:
             names = [member.name for member in archive.getmembers() if member.name and member.name != "."]
@@ -289,4 +315,14 @@ def inspect_archive_layout(archive_path: Path, executable_name: str) -> str:
             f"Archive {archive_path.name} did not contain expected executable {expected_executable}."
         )
 
-    return top_level
+    expected_icon = f"{top_level}/{icon_path}" if icon_path else None
+    return ArchiveInspection(
+        top_level=top_level,
+        icon_present=expected_icon in normalized_names if expected_icon else False,
+    )
+
+
+def _source_has_icon(source: PreparedSource | str | None) -> bool:
+    if isinstance(source, PreparedSource):
+        return source.icon_present
+    return False
