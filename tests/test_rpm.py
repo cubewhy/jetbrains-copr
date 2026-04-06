@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 import io
+from pathlib import Path
 import tarfile
 
 import pytest
@@ -96,3 +97,41 @@ def test_render_spec_includes_selected_architectures(tmp_path):
     )
 
     assert "ExclusiveArch: x86_64 aarch64" in destination.read_text(encoding="utf-8")
+
+
+def test_real_spec_template_escapes_percent_sequences(tmp_path):
+    builder = RpmBuilder(template_path=Path("packaging/jetbrains-rpm.spec.j2"))
+    destination = tmp_path / "jetbrains.spec"
+    product = ProductConfig(
+        code="IIU",
+        name="IntelliJ IDEA Ultimate",
+        rpm_name="jetbrains-idea-ultimate",
+        executable_name="idea.sh",
+        desktop_file_name="jetbrains-idea-ultimate.desktop",
+        icon_path="bin/idea.png",
+        startup_wm_class="jetbrains-idea",
+        comment="JetBrains IntelliJ IDEA Ultimate IDE",
+        categories=["Development", "IDE"],
+        enabled=True,
+    )
+    release = ReleaseInfo(
+        code="IIU",
+        version="2026.1",
+        build="261.22158.277",
+        release_date=date(2026, 3, 25),
+        notes_url=None,
+        downloads={},
+    )
+
+    builder.render_spec(
+        product=product,
+        release=release,
+        architectures=[Architecture.X86_64],
+        source_files={Architecture.X86_64: "IIU-x86_64-idea-2026.1.tar.gz"},
+        destination=destination,
+    )
+
+    rendered = destination.read_text(encoding="utf-8")
+
+    assert "Exec=/usr/bin/jetbrains-idea-ultimate %%f" in rendered
+    assert "find . -mindepth 1 -printf '/opt/jetbrains-idea-ultimate/%%P\\n'" in rendered

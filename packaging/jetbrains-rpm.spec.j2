@@ -65,7 +65,7 @@ cat > %{buildroot}%{_datadir}/applications/{{ desktop_file_name }} <<'EOF'
 Version=1.0
 Type=Application
 Name={{ name }}
-Exec=/usr/bin/{{ rpm_name }} %f
+Exec=/usr/bin/{{ rpm_name }} %%f
 Icon={{ rpm_name }}
 Terminal=false
 StartupNotify=true
@@ -86,7 +86,7 @@ rm -f %{manifest_path}
 printf '/opt/{{ rpm_name }}\n' > %{manifest_path}
 (
   cd %{buildroot}/opt/{{ rpm_name }}
-  find . -mindepth 1 -printf '/opt/{{ rpm_name }}/%P\n' | LC_ALL=C sort
+  find . -mindepth 1 -printf '/opt/{{ rpm_name }}/%%P\n' | LC_ALL=C sort
 ) >> %{manifest_path}
 printf '%%{_bindir}/{{ rpm_name }}\n' >> %{manifest_path}
 printf '%%{_datadir}/applications/{{ desktop_file_name }}\n' >> %{manifest_path}
