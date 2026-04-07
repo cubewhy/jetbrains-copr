@@ -90,6 +90,12 @@
       "updated_at": "2026-04-07T12:08:07.075772Z",
       "version": "2026.1-EAP8"
     },
+    "RD:release": {
+      "build": "261.22158.335",
+      "rpm_name": "jetbrains-rider",
+      "updated_at": "2026-04-07T16:32:58.215067Z",
+      "version": "2026.1"
+    },
     "RM:release": {
       "build": "261.22158.284",
       "rpm_name": "jetbrains-rubymine",
