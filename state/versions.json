@@ -113,6 +113,12 @@
       "rpm_name": "jetbrains-rustrover",
       "updated_at": "2026-04-07T18:02:12.057018Z",
       "version": "2026.1"
+    },
+    "WS:release": {
+      "build": "261.22158.274",
+      "rpm_name": "jetbrains-webstorm",
+      "updated_at": "2026-04-07T20:47:02.580864Z",
+      "version": "2026.1"
     }
   }
 }
