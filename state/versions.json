@@ -1,5 +1,11 @@
 {
   "products": {
+    "CL:release": {
+      "build": "261.22158.273",
+      "rpm_name": "jetbrains-clion",
+      "updated_at": "2026-04-07T01:05:07.352189Z",
+      "version": "2026.1"
+    },
     "GO:release": {
       "build": "261.22158.291",
       "rpm_name": "jetbrains-goland",
