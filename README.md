@@ -20,13 +20,9 @@ Then you can install any IDEs you want
 
 You can find the IDE names at [config/products.json](https://github.com/cubewhy/jetbrains-copr/blob/master/config/products.json)
 
-## Download the RPM directly
-
-[GitHub releases](https://github.com/cubewhy/jetbrains-copr/releases)
-
 # Original AIGC README
 
-`jetbrains-copr` automates JetBrains Linux repackaging for COPR. It checks the JetBrains releases API for multiple configured products, downloads official Linux archives, verifies upstream checksums when available, builds RPMs for `x86_64` and `aarch64`, publishes binary RPMs to GitHub Releases, and submits an SRPM to the COPR project `cubewhy/jetbrains`.
+`jetbrains-copr` automates JetBrains Linux repackaging for COPR. It checks the JetBrains releases API for multiple configured products, downloads official Linux archives, verifies upstream checksums when available, builds source RPMs from a generated spec, and optionally submits the SRPM to the COPR project `cubewhy/jetbrains`.
 
 The project is intentionally config-driven and practical. It does not attempt native builds. It only repackages official upstream archives, which makes cross-architecture packaging feasible on a single CI runner.
 
@@ -37,8 +33,7 @@ The project is intentionally config-driven and practical. It does not attempt na
 - Supports explicit per-product metadata such as executable name, desktop file name, icon path, and StartupWMClass
 - Handles `x86_64` and `aarch64` independently based on upstream availability
 - Verifies upstream SHA256 checksums when JetBrains provides checksum URLs
-- Builds binary RPMs and an SRPM from a generated Jinja2 spec file
-- Publishes binary RPMs to deterministic GitHub Releases
+- Builds SRPMs from a generated Jinja2 spec file
 - Submits the SRPM to COPR with `copr-cli`
 - Tracks processed versions in `state/versions.json`
 - Provides a local CLI for `check` and `build`
@@ -50,7 +45,6 @@ The project is intentionally config-driven and practical. It does not attempt na
 - Python 3.12+
 - `uv`
 - `rpmbuild` available in `PATH` for real package builds
-- `gh` available in `PATH` if GitHub Release publishing is enabled
 - `copr-cli` available in `PATH` if COPR submission is enabled
 
 ## Local Setup With uv
@@ -82,7 +76,7 @@ uv run jetbrains-copr build \
 
 ## Local Build Example Without Publishing
 
-This performs actual downloads, checksum verification, archive inspection, and RPM builds, but does not require GitHub or COPR credentials.
+This performs actual downloads, checksum verification, archive inspection, and SRPM builds, but does not require COPR credentials unless you also publish.
 
 ```bash
 uv run jetbrains-copr build \
@@ -94,7 +88,7 @@ uv run jetbrains-copr build \
   --cleanup-after-product
 ```
 
-`--jobs` parallelizes the heavy per-product build stage. Publishing to GitHub Releases, COPR submission, and state updates stay serialized so side effects remain deterministic. On GitHub-hosted runners, start with `--jobs 1` and `--cleanup-after-product` because JetBrains archives are large enough to exhaust disk if you retain multiple products at once.
+`--jobs` parallelizes the heavy per-product build stage. COPR submission and state updates stay serialized so side effects remain deterministic. On GitHub-hosted runners, start with `--jobs 1` and `--cleanup-after-product` because JetBrains archives are large enough to exhaust disk if you retain multiple products at once.
 
 If you also pass `--sync-state-to-git`, each successful state update is committed and pushed immediately instead of waiting for the full batch to finish.
 
@@ -157,20 +151,17 @@ The last fully processed upstream release per product is stored in [`state/versi
 State is updated only after the full product flow succeeds:
 
 1. Source download and checksum verification
-2. RPM and SRPM build
-3. Optional GitHub Release publishing
-4. Optional COPR submission
+2. Spec render and SRPM build
+3. Optional COPR submission
 
 If one product fails, other products continue where possible, and only successful products are written back to state.
 
 When `--sync-state-to-git` is enabled, each successful state write is also committed and pushed right away.
 
-## Required GitHub Secrets
+## Required CI Secrets
 
 Scheduled or manual CI runs should provide:
 
-- `GITHUB_TOKEN`
-  GitHub automatically provides this in Actions for release publishing.
 - `COPR_LOGIN`
   COPR API login value.
 - `COPR_USERNAME`
@@ -182,24 +173,20 @@ Scheduled or manual CI runs should provide:
 
 ## How COPR Submission Works
 
-The repository builds binary RPMs locally for direct download and also builds an SRPM from the same generated spec. GitHub Releases receive binary RPMs only. When COPR publishing is enabled, the automation submits the SRPM to `cubewhy/jetbrains` with `copr-cli`.
+The repository builds an SRPM from the generated spec and, when COPR publishing is enabled, submits that SRPM to `cubewhy/jetbrains` with `copr-cli`.
 
-This avoids uploading prebuilt binary RPMs to COPR and matches normal COPR practice.
+This avoids building or distributing prebuilt binary RPMs outside COPR and matches normal COPR practice.
 
 ## Troubleshooting
 
 - `rpmbuild` missing
   Install RPM tooling before running `build` without `--dry-run`.
-- `gh` missing
-  Install GitHub CLI or disable `--publish-release`.
 - `copr-cli` missing
   Install `copr-cli` or disable `--publish-copr`.
 - Checksum verification failed
   The run stops for that product. Inspect the downloaded checksum file and upstream artifact.
 - Archive layout changed
   The run stops for that product with a clear archive layout error. Review [`docs/OPERATIONS.md`](/mnt/data/dev/projects/jetbrains-copr/docs/OPERATIONS.md).
-- GitHub Release already exists
-  The publisher updates the release and replaces matching assets with `gh release upload --clobber`.
 - State appears stale
   Validate the upstream version and compare it with [`state/versions.json`](/mnt/data/dev/projects/jetbrains-copr/state/versions.json).
 

@@ -13,33 +13,10 @@ from jetbrains_copr.orchestrator import (
     ProductEvaluation,
     _publish_completed_result,
     cleanup_completed_product_paths,
-    collect_release_assets,
     run_build,
     select_products,
 )
 from jetbrains_copr.rpm import BuildArtifacts
-
-
-def test_collect_release_assets_excludes_srpm(tmp_path: Path):
-    x86_rpm = tmp_path / "product.x86_64.rpm"
-    aarch64_rpm = tmp_path / "product.aarch64.rpm"
-    srpm = tmp_path / "product.src.rpm"
-    spec = tmp_path / "product.spec"
-
-    for path in (x86_rpm, aarch64_rpm, srpm, spec):
-        path.write_text("x", encoding="utf-8")
-
-    artifacts = BuildArtifacts(
-        spec_path=spec,
-        srpm_path=srpm,
-        binary_rpms={
-            Architecture.X86_64: x86_rpm,
-            Architecture.AARCH64: aarch64_rpm,
-        },
-        artifact_dir=tmp_path,
-    )
-
-    assert collect_release_assets(artifacts) == [x86_rpm, aarch64_rpm]
 
 
 def test_run_build_rejects_invalid_jobs(tmp_path: Path):
@@ -49,7 +26,6 @@ def test_run_build_rejects_invalid_jobs(tmp_path: Path):
             state_path=tmp_path / "versions.json",
             output_dir=tmp_path / "dist",
             root_dir=tmp_path / "work",
-            publish_release=False,
             publish_copr=False,
             dry_run=True,
             jobs=0,
@@ -137,7 +113,6 @@ def test_publish_completed_result_saves_state_before_sync_callback(tmp_path: Pat
         exported=BuildArtifacts(
             spec_path=spec_path,
             srpm_path=None,
-            binary_rpms={},
             artifact_dir=artifact_dir,
         ),
         work_dir=tmp_path / "work" / product.rpm_name,
@@ -154,8 +129,6 @@ def test_publish_completed_result_saves_state_before_sync_callback(tmp_path: Pat
 
     _publish_completed_result(
         result=result,
-        github_publisher=None,
-        github_repository=None,
         copr_publisher=None,
         copr_project="cubewhy/jetbrains",
         state=StateFile(),

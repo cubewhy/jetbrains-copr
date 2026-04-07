@@ -15,7 +15,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from jetbrains_copr.errors import PackagingError
 from jetbrains_copr.http import RetryingHttpClient
-from jetbrains_copr.models import ARCHITECTURE_ORDER, Architecture, ProductConfig, ReleaseInfo
+from jetbrains_copr.models import Architecture, ProductConfig, ReleaseInfo
 from jetbrains_copr.util import ensure_directory, format_rpm_changelog_date, require_command, sanitize_rpm_release, sanitize_rpm_version, sanitize_tag_component, tail_lines, utcnow
 
 
@@ -39,7 +39,6 @@ class BuildArtifacts:
 
     spec_path: Path
     srpm_path: Path | None
-    binary_rpms: dict[Architecture, Path]
     artifact_dir: Path
 
 
@@ -158,23 +157,6 @@ class RpmBuilder:
             raise PackagingError(f"Expected exactly one SRPM in {resolved_topdir / 'SRPMS'}, found {len(built)}.")
         return built[0]
 
-    def build_binary_rpm(self, *, spec_path: Path, topdir: Path, architecture: Architecture) -> Path:
-        """Build a binary RPM for one target architecture."""
-
-        require_command("rpmbuild")
-        resolved_topdir = topdir.resolve()
-        resolved_spec_path = spec_path.resolve()
-        self._run_rpmbuild(
-            ["--target", architecture.rpm_target, "-bb", str(resolved_spec_path)],
-            topdir=resolved_topdir,
-        )
-        built = list((resolved_topdir / "RPMS" / architecture.value).glob("*.rpm"))
-        if len(built) != 1:
-            raise PackagingError(
-                f"Expected exactly one {architecture.value} RPM in {resolved_topdir / 'RPMS' / architecture.value}, found {len(built)}."
-            )
-        return built[0]
-
     def export_artifacts(
         self,
         *,
@@ -182,7 +164,6 @@ class RpmBuilder:
         release: ReleaseInfo,
         spec_path: Path,
         srpm_path: Path | None,
-        binary_rpms: dict[Architecture, Path],
         output_dir: Path,
     ) -> BuildArtifacts:
         """Copy rendered artifacts into the final output directory."""
@@ -197,19 +178,9 @@ class RpmBuilder:
             exported_srpm = artifact_dir / srpm_path.name
             shutil.copy2(srpm_path, exported_srpm)
 
-        exported_rpms: dict[Architecture, Path] = {}
-        for architecture in ARCHITECTURE_ORDER:
-            source_path = binary_rpms.get(architecture)
-            if source_path is None:
-                continue
-            destination = artifact_dir / source_path.name
-            shutil.copy2(source_path, destination)
-            exported_rpms[architecture] = destination
-
         return BuildArtifacts(
             spec_path=exported_spec,
             srpm_path=exported_srpm,
-            binary_rpms=exported_rpms,
             artifact_dir=artifact_dir,
         )
 

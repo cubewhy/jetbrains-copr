@@ -11,11 +11,6 @@ on:
         description: "Optional comma-separated architectures, for example x86_64,aarch64"
         required: false
         type: string
-      publish_release:
-        description: "Publish GitHub Releases"
-        required: true
-        default: false
-        type: boolean
       publish_copr:
         description: "Submit SRPM to COPR"
         required: true
@@ -44,11 +39,9 @@ jobs:
   manual-build:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
       COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
       COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
       UV_LINK_MODE: copy
     steps:
       - name: Check out repository
@@ -103,10 +96,6 @@ jobs:
             --cleanup-after-product
             --sync-state-to-git
           )
-
-          if [[ "${{ inputs.publish_release }}" == "true" ]]; then
-            args+=(--publish-release)
-          fi
 
           if [[ "${{ inputs.publish_copr }}" == "true" ]]; then
             args+=(--publish-copr)

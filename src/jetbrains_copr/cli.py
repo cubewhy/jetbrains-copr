@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 import json
 import logging
-import os
 
 import typer
 
@@ -58,7 +57,6 @@ def build(
     state_path: Path = typer.Option(Path("state/versions.json"), "--state"),
     output_dir: Path = typer.Option(Path("dist"), "--output-dir"),
     root_dir: Path = typer.Option(Path("work"), "--root-dir"),
-    publish_release: bool = typer.Option(False, "--publish-release"),
     publish_copr: bool = typer.Option(False, "--publish-copr"),
     product: list[str] | None = typer.Option(None, "--product"),
     architecture: list[Architecture] | None = typer.Option(None, "--arch"),
@@ -76,12 +74,6 @@ def build(
         "--sync-state-to-git",
         help="Commit and push the state file after each successful product state update.",
     ),
-    github_repository: str | None = typer.Option(
-        None,
-        "--github-repository",
-        show_default="env:GITHUB_REPOSITORY",
-        help="Repository in owner/name form for GitHub Releases.",
-    ),
     copr_project: str = typer.Option("cubewhy/jetbrains", "--copr-project"),
 ) -> None:
     """Build packages and optionally publish them."""
@@ -97,7 +89,6 @@ def build(
             state_path=state_path,
             output_dir=output_dir,
             root_dir=root_dir,
-            publish_release=publish_release,
             publish_copr=publish_copr,
             product_filters=product,
             architecture_filters=architecture,
@@ -106,7 +97,6 @@ def build(
             force=force,
             jobs=jobs,
             cleanup_after_product=cleanup_after_product,
-            github_repository=github_repository or os.environ.get("GITHUB_REPOSITORY"),
             copr_project=copr_project,
             state_sync_callback=state_sync_callback,
         )

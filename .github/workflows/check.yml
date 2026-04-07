@@ -15,11 +15,9 @@ jobs:
   check-and-publish:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       COPR_LOGIN: ${{ secrets.COPR_LOGIN }}
       COPR_USERNAME: ${{ secrets.COPR_USERNAME }}
       COPR_TOKEN: ${{ secrets.COPR_TOKEN }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
       JETBRAINS_COPR_JOBS: ${{ vars.JETBRAINS_COPR_JOBS }}
       UV_LINK_MODE: copy
     steps:
@@ -59,7 +57,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Build and publish
+      - name: Build and publish to COPR
         id: automation
         continue-on-error: true
         shell: bash
@@ -73,7 +71,6 @@ jobs:
             --jobs "${JETBRAINS_COPR_JOBS:-1}" \
             --cleanup-after-product \
             --sync-state-to-git \
-            --publish-release \
             --publish-copr
 
       - name: Fail job if automation failed

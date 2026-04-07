@@ -22,7 +22,7 @@ class PackagingError(JetbrainsCoprError):
 
 
 class PublishingError(JetbrainsCoprError):
-    """Raised when GitHub Release or COPR publishing fails."""
+    """Raised when COPR publishing fails."""
 
 
 class SetupError(JetbrainsCoprError):

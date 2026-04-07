@@ -19,10 +19,9 @@ Use a staged rollout instead of enabling everything at once.
 1. Run `uv run jetbrains-copr check` locally and review the JSON output.
 2. Run `uv run jetbrains-copr build --dry-run`.
 3. Run `uv run jetbrains-copr build --product IIU` without publishing.
-4. Inspect the generated RPM and SRPM.
+4. Inspect the generated spec and SRPM.
 5. Repeat for other products.
-6. Enable GitHub Release publishing.
-7. Enable COPR publishing last.
+6. Enable COPR publishing last.
 
 ## Adding Products
 
@@ -60,17 +59,10 @@ uv run jetbrains-copr build --product IIU --force
 
 Typical reasons:
 
-- a GitHub Release was deleted or corrupted
 - the spec template changed
 - COPR submission failed after local packaging succeeded
 
-## Recovering From Failed Releases
-
-If GitHub Release publishing partially succeeded:
-
-1. Re-run the build with `--force --publish-release`.
-2. The publisher will reuse the same tag and replace matching assets.
-3. If the existing release contains bad assets and needs manual cleanup, delete the bad assets or delete the release entirely, then rerun.
+## Recovering From Failed COPR Submission
 
 If COPR submission failed:
 
@@ -85,7 +77,7 @@ Local runs emit structured operator-oriented logs to standard error. In GitHub A
 - JetBrains API response changes
 - checksum download failure
 - unexpected archive layout
-- missing `gh` or `copr-cli`
+- missing `copr-cli`
 - missing credentials when publishing is enabled
 
 ## Rotating COPR Credentials
@@ -106,15 +98,6 @@ The packager validates that each archive has a single top-level directory and th
 2. Update the relevant product metadata in [`config/products.json`](/mnt/data/dev/projects/jetbrains-copr/config/products.json) if only the executable or icon path changed.
 3. If the overall layout changed, update the archive inspection logic in [`rpm.py`](/mnt/data/dev/projects/jetbrains-copr/src/jetbrains_copr/rpm.py).
 4. Run the tests and a single-product local build before resuming automation.
-
-## If A GitHub Release Already Exists With Bad Artifacts
-
-You have two safe options:
-
-1. Re-run with `--force --publish-release` and let `gh release upload --clobber` replace assets with the same names.
-2. Delete the release manually, then rerun the same command.
-
-The tag name is deterministic, so reruns target the same logical release.
 
 ## If The State File Gets Out Of Sync
 

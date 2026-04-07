@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "jetbrains-copr"
 version = "0.1.0"
-description = "Detect JetBrains Linux updates, repackage them into RPMs, publish GitHub Releases, and submit SRPMs to COPR."
+description = "Detect JetBrains Linux updates, repackage them into source RPMs, and submit SRPMs to COPR."
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }

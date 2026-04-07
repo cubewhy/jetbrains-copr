@@ -26,10 +26,6 @@ class Architecture(StrEnum):
             return "linux"
         return "linuxARM64"
 
-    @property
-    def rpm_target(self) -> str:
-        return f"{self.value}-redhat-linux"
-
 
 ARCHITECTURE_ORDER = [Architecture.X86_64, Architecture.AARCH64]
 

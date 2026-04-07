@@ -12,7 +12,6 @@ import shutil
 from jetbrains_copr.config import load_products_config
 from jetbrains_copr.copr import CoprPublisher
 from jetbrains_copr.errors import ApiError, ConfigError, PackagingError, PublishingError, SetupError
-from jetbrains_copr.github_release import GitHubReleasePublisher
 from jetbrains_copr.http import RetryingHttpClient
 from jetbrains_copr.jetbrains_api import JetBrainsReleaseClient
 from jetbrains_copr.models import ARCHITECTURE_ORDER, Architecture, ProductConfig, ReleaseInfo, StateEntry
@@ -223,7 +222,6 @@ def run_build(
     state_path: Path,
     output_dir: Path,
     root_dir: Path,
-    publish_release: bool,
     publish_copr: bool,
     product_filters: list[str] | None = None,
     architecture_filters: list[Architecture] | None = None,
@@ -232,7 +230,6 @@ def run_build(
     force: bool = False,
     jobs: int = 1,
     cleanup_after_product: bool = False,
-    github_repository: str | None = None,
     copr_project: str = "cubewhy/jetbrains",
     state_sync_callback: StateSyncCallback | None = None,
 ) -> BuildSummary:
@@ -242,7 +239,6 @@ def run_build(
         raise ConfigError("--jobs must be at least 1.")
 
     if dry_run:
-        publish_release = False
         publish_copr = False
 
     evaluations = evaluate_products(
@@ -253,7 +249,6 @@ def run_build(
         force=force,
     )
     state = load_state(state_path)
-    github_publisher = GitHubReleasePublisher() if publish_release else None
     copr_publisher = CoprPublisher() if publish_copr else None
 
     successful: list[str] = []
@@ -318,8 +313,6 @@ def run_build(
             jobs=jobs,
             root_dir=root_dir,
             output_dir=output_dir,
-            github_publisher=github_publisher,
-            github_repository=github_repository,
             copr_publisher=copr_publisher,
             copr_project=copr_project,
             state=state,
@@ -346,8 +339,6 @@ def _run_parallel_build_and_publish(
     jobs: int,
     root_dir: Path,
     output_dir: Path,
-    github_publisher: GitHubReleasePublisher | None,
-    github_repository: str | None,
     copr_publisher: CoprPublisher | None,
     copr_project: str,
     state,
@@ -406,8 +397,6 @@ def _run_parallel_build_and_publish(
                 else:
                     _publish_completed_result(
                         result=result,
-                        github_publisher=github_publisher,
-                        github_repository=github_repository,
                         copr_publisher=copr_publisher,
                         copr_project=copr_project,
                         state=state,
@@ -452,8 +441,6 @@ def _submit_build(
 def _publish_completed_result(
     *,
     result: BuildExecutionResult,
-    github_publisher: GitHubReleasePublisher | None,
-    github_repository: str | None,
     copr_publisher: CoprPublisher | None,
     copr_project: str,
     state,
@@ -477,23 +464,6 @@ def _publish_completed_result(
     exported = result.exported
 
     try:
-        if github_publisher is not None:
-            if not github_repository:
-                raise ConfigError("GitHub Release publishing is enabled, but no GitHub repository was provided.")
-            release_assets = collect_release_assets(exported)
-            LOGGER.info(
-                "Publishing %s to GitHub Release with assets: %s",
-                product_label,
-                ", ".join(asset.name for asset in release_assets) or "none",
-            )
-            github_publisher.publish(
-                repository=github_repository,
-                tag=build_release_tag(product, release),
-                title=f"{product.name} {release.version} ({release.build})",
-                notes=build_release_notes(product, release, exported),
-                assets=release_assets,
-            )
-
         if copr_publisher is not None:
             if exported.srpm_path is None:
                 raise PackagingError("SRPM was not built, so COPR submission cannot continue.")
@@ -569,7 +539,6 @@ def _render_dry_run_artifacts(
         release=release,
         spec_path=spec_path,
         srpm_path=None,
-        binary_rpms={},
         output_dir=output_dir,
     )
     LOGGER.info("Rendered dry-run artifacts for %s at %s", product_label, exported.artifact_dir)
@@ -635,27 +604,18 @@ def _build_product_artifacts(
     )
 
     srpm_path = builder.build_srpm(spec_path=spec_path, topdir=topdir)
-    binary_rpms = {
-        architecture: builder.build_binary_rpm(
-            spec_path=spec_path,
-            topdir=topdir,
-            architecture=architecture,
-        )
-        for architecture in evaluation.selected_architectures
-    }
     exported = builder.export_artifacts(
         product=product,
         release=release,
         spec_path=spec_path,
         srpm_path=srpm_path,
-        binary_rpms=binary_rpms,
         output_dir=output_dir,
     )
     LOGGER.info(
         "Built artifacts for %s at %s: %s",
         product_label,
         exported.artifact_dir,
-        ", ".join(path.name for path in collect_release_assets(exported)) or "no release assets",
+        exported.srpm_path.name if exported.srpm_path is not None else "no SRPM artifact",
     )
     return BuildExecutionResult(evaluation=evaluation, exported=exported, work_dir=work_dir)
 
@@ -732,57 +692,6 @@ def normalize_architectures(architectures: list[Architecture] | None) -> list[Ar
         return ARCHITECTURE_ORDER.copy()
     requested = set(architectures)
     return [arch for arch in ARCHITECTURE_ORDER if arch in requested]
-
-
-def build_release_tag(product: ProductConfig, release: ReleaseInfo) -> str:
-    """Generate a deterministic Git tag for GitHub Releases."""
-
-    return "-".join(
-        [
-            sanitize_tag_component(product.rpm_name),
-            sanitize_tag_component(release.version),
-            f"b{sanitize_tag_component(release.build)}",
-        ]
-    )
-
-
-def build_release_notes(product: ProductConfig, release: ReleaseInfo, artifacts: BuildArtifacts) -> str:
-    """Render GitHub Release notes."""
-
-    lines = [
-        f"# {product.name}",
-        "",
-        f"- Version: `{release.version}`",
-        f"- Build: `{release.build}`",
-        f"- Release type: `{product.release_type}`",
-        f"- Release date: `{release.release_date.isoformat()}`",
-        f"- Architectures: {', '.join(arch.value for arch in artifacts.binary_rpms)}",
-        f"- RPM name: `{product.rpm_name}`",
-    ]
-    if release.notes_url:
-        lines.append(f"- Upstream notes: {release.notes_url}")
-    lines.extend(
-        [
-            "",
-            "Artifacts in this release were generated from official JetBrains Linux archives.",
-        ]
-    )
-    return "\n".join(lines)
-
-
-def collect_release_assets(artifacts: BuildArtifacts) -> list[Path]:
-    """Return GitHub Release assets in a predictable order.
-
-    SRPMs are intentionally excluded. They are built for COPR submission, while
-    GitHub Releases are used for direct end-user RPM downloads.
-    """
-
-    assets: list[Path] = []
-    for architecture in ARCHITECTURE_ORDER:
-        asset = artifacts.binary_rpms.get(architecture)
-        if asset is not None:
-            assets.append(asset)
-    return assets
 
 
 def _serialize_release(release: ReleaseInfo | None) -> dict[str, object] | None:
