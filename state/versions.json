@@ -83,6 +83,12 @@
       "rpm_name": "jetbrains-phpstorm",
       "updated_at": "2026-04-07T08:46:59.037848Z",
       "version": "2026.1"
+    },
+    "RD:eap": {
+      "build": "261.22158.95",
+      "rpm_name": "jetbrains-rider-eap",
+      "updated_at": "2026-04-07T12:08:07.075772Z",
+      "version": "2026.1-EAP8"
     }
   }
 }
