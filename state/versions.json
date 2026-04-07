@@ -107,6 +107,12 @@
       "rpm_name": "jetbrains-rubymine",
       "updated_at": "2026-04-07T15:08:59.078858Z",
       "version": "2026.1"
+    },
+    "RR:release": {
+      "build": "261.22158.331",
+      "rpm_name": "jetbrains-rustrover",
+      "updated_at": "2026-04-07T18:02:12.057018Z",
+      "version": "2026.1"
     }
   }
 }
