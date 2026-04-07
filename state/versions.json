@@ -89,6 +89,12 @@
       "rpm_name": "jetbrains-rider-eap",
       "updated_at": "2026-04-07T12:08:07.075772Z",
       "version": "2026.1-EAP8"
+    },
+    "RM:release": {
+      "build": "261.22158.284",
+      "rpm_name": "jetbrains-rubymine",
+      "updated_at": "2026-04-07T15:08:59.078858Z",
+      "version": "2026.1"
     }
   }
 }
