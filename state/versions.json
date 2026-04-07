@@ -1,5 +1,11 @@
 {
   "products": {
+    "GO:release": {
+      "build": "261.22158.291",
+      "rpm_name": "jetbrains-goland",
+      "updated_at": "2026-04-07T00:03:58.329842Z",
+      "version": "2026.1"
+    },
     "IIU:eap": {
       "build": "261.22158.121",
       "rpm_name": "jetbrains-idea-eap",
