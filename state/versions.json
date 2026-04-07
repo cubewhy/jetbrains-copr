@@ -108,6 +108,12 @@
       "updated_at": "2026-04-07T15:08:59.078858Z",
       "version": "2026.1"
     },
+    "RR:eap": {
+      "build": "261.22158.214",
+      "rpm_name": "jetbrains-rustrover-eap",
+      "updated_at": "2026-04-07T22:26:33.784791Z",
+      "version": "2026.1"
+    },
     "RR:release": {
       "build": "261.22158.331",
       "rpm_name": "jetbrains-rustrover",
