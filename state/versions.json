@@ -49,10 +49,10 @@
       "version": "2026.1"
     },
     "IIU:eap": {
-      "build": "261.22158.121",
+      "build": "261.23567.28",
       "rpm_name": "jetbrains-idea-eap",
-      "updated_at": "2026-04-06T22:45:15.750853Z",
-      "version": "2026.1"
+      "updated_at": "2026-04-10T05:19:16.566457Z",
+      "version": "2026.1.1"
     },
     "IIU:release": {
       "build": "261.22158.277",
