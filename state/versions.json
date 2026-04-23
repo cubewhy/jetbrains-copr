@@ -7,10 +7,10 @@
       "version": "2026.1"
     },
     "CL:release": {
-      "build": "261.22158.273",
+      "build": "261.23567.135",
       "rpm_name": "jetbrains-clion",
-      "updated_at": "2026-04-07T01:05:07.352189Z",
-      "version": "2026.1"
+      "updated_at": "2026-04-23T15:58:00.642497Z",
+      "version": "2026.1.1"
     },
     "DG:eap": {
       "build": "261.21849.37",
