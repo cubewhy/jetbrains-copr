@@ -67,10 +67,10 @@
       "version": "2026.1"
     },
     "PCP:release": {
-      "build": "261.22158.340",
+      "build": "261.23567.174",
       "rpm_name": "jetbrains-pycharm",
-      "updated_at": "2026-04-06T20:39:31.457441Z",
-      "version": "2026.1"
+      "updated_at": "2026-04-28T20:45:23.416241Z",
+      "version": "2026.1.1"
     },
     "PS:eap": {
       "build": "261.23567.32",
