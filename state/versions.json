@@ -97,10 +97,10 @@
       "version": "2026.1.1"
     },
     "RM:eap": {
-      "build": "261.24374.27",
+      "build": "262.4852.42",
       "rpm_name": "jetbrains-rubymine-eap",
-      "updated_at": "2026-04-30T15:10:11.099775Z",
-      "version": "2026.1.2"
+      "updated_at": "2026-05-07T22:18:10.478574Z",
+      "version": "2026.2"
     },
     "RM:release": {
       "build": "261.23567.142",
