@@ -109,10 +109,10 @@
       "version": "2026.1.1"
     },
     "RR:eap": {
-      "build": "261.22158.214",
+      "build": "262.4852.47",
       "rpm_name": "jetbrains-rustrover-eap",
-      "updated_at": "2026-04-07T22:26:33.784791Z",
-      "version": "2026.1"
+      "updated_at": "2026-05-07T20:48:05.394307Z",
+      "version": "2026.2"
     },
     "RR:release": {
       "build": "261.23567.140",
