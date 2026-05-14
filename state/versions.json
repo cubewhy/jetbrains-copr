@@ -37,9 +37,9 @@
       "version": "2026.1.1"
     },
     "GO:eap": {
-      "build": "262.4852.49",
+      "build": "262.5752.31",
       "rpm_name": "jetbrains-goland-eap",
-      "updated_at": "2026-05-07T15:58:52.945046Z",
+      "updated_at": "2026-05-14T16:13:29.017452Z",
       "version": "2026.2"
     },
     "GO:release": {
