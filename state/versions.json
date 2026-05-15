@@ -73,9 +73,9 @@
       "version": "2026.1.2"
     },
     "PS:eap": {
-      "build": "262.4852.70",
+      "build": "262.5752.40",
       "rpm_name": "jetbrains-phpstorm-eap",
-      "updated_at": "2026-05-11T10:41:28.235317Z",
+      "updated_at": "2026-05-15T19:46:07.430732Z",
       "version": "2026.2"
     },
     "PS:release": {
