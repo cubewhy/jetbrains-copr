@@ -31,10 +31,10 @@
       "version": "2026.1"
     },
     "DS:release": {
-      "build": "261.23567.176",
+      "build": "261.25134.18",
       "rpm_name": "jetbrains-dataspell",
-      "updated_at": "2026-04-29T20:50:38.008068Z",
-      "version": "2026.1.1"
+      "updated_at": "2026-05-22T16:55:19.446189Z",
+      "version": "2026.1.2"
     },
     "GO:eap": {
       "build": "262.6228.35",
