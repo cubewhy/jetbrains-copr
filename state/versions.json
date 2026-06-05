@@ -51,7 +51,7 @@
     "IIU:eap": {
       "build": "262.7132.23",
       "rpm_name": "jetbrains-idea-eap",
-      "updated_at": "2026-06-05T15:44:16.929097Z",
+      "updated_at": "2026-06-05T19:18:43.051964Z",
       "version": "2026.2"
     },
     "IIU:release": {
@@ -97,9 +97,9 @@
       "version": "2026.1.2"
     },
     "RM:eap": {
-      "build": "262.7132.25",
+      "build": "262.6653.30",
       "rpm_name": "jetbrains-rubymine-eap",
-      "updated_at": "2026-06-05T16:31:06.310901Z",
+      "updated_at": "2026-05-28T17:35:43.901325Z",
       "version": "2026.2"
     },
     "RM:release": {
