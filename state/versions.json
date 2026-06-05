@@ -121,9 +121,9 @@
       "version": "2026.1.2"
     },
     "WS:eap": {
-      "build": "262.6653.15",
+      "build": "262.7132.27",
       "rpm_name": "jetbrains-webstorm-eap",
-      "updated_at": "2026-05-28T18:28:27.013219Z",
+      "updated_at": "2026-06-05T22:46:24.626831Z",
       "version": "2026.2"
     },
     "WS:release": {
