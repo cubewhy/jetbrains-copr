@@ -49,9 +49,9 @@
       "version": "2026.1.4"
     },
     "IIU:eap": {
-      "build": "262.8377.35",
+      "build": "262.8665.81",
       "rpm_name": "jetbrains-idea-eap",
-      "updated_at": "2026-06-25T21:55:44.111711Z",
+      "updated_at": "2026-07-03T11:50:07.518407Z",
       "version": "2026.2"
     },
     "IIU:release": {
