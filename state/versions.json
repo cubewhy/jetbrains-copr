@@ -127,10 +127,10 @@
       "version": "2026.2"
     },
     "WS:release": {
-      "build": "261.26222.58",
+      "build": "262.8665.259",
       "rpm_name": "jetbrains-webstorm",
-      "updated_at": "2026-07-02T23:31:49.506956Z",
-      "version": "2026.1.4"
+      "updated_at": "2026-07-16T23:02:36.662598Z",
+      "version": "2026.2"
     }
   }
 }
