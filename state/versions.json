@@ -79,10 +79,10 @@
       "version": "2026.2"
     },
     "PS:release": {
-      "build": "261.26222.71",
+      "build": "262.8665.265",
       "rpm_name": "jetbrains-phpstorm",
-      "updated_at": "2026-07-02T21:03:13.300995Z",
-      "version": "2026.1.4"
+      "updated_at": "2026-07-16T21:35:09.882222Z",
+      "version": "2026.2"
     },
     "RD:eap": {
       "build": "262.8665.68",
