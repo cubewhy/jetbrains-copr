@@ -91,10 +91,10 @@
       "version": "2026.2-EAP9"
     },
     "RD:release": {
-      "build": "261.26222.60",
+      "build": "262.8665.328",
       "rpm_name": "jetbrains-rider",
-      "updated_at": "2026-07-02T17:41:35.695424Z",
-      "version": "2026.1.4"
+      "updated_at": "2026-07-22T16:45:46.585754Z",
+      "version": "2026.2"
     },
     "RM:eap": {
       "build": "262.8665.80",
