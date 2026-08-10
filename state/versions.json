@@ -55,10 +55,10 @@
       "version": "2026.2.1"
     },
     "IIU:release": {
-      "build": "262.8665.337",
+      "build": "262.9437.185",
       "rpm_name": "jetbrains-idea",
-      "updated_at": "2026-07-23T16:12:25.460241Z",
-      "version": "2026.2.0.1"
+      "updated_at": "2026-08-10T14:46:18.353136Z",
+      "version": "2026.2.1"
     },
     "PCP:eap": {
       "build": "262.8665.97",
