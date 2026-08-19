@@ -43,10 +43,10 @@
       "version": "2026.2"
     },
     "GO:release": {
-      "build": "262.9437.195",
+      "build": "262.9437.286",
       "rpm_name": "jetbrains-goland",
-      "updated_at": "2026-08-10T20:48:09.885175Z",
-      "version": "2026.2.1"
+      "updated_at": "2026-08-19T14:05:20.419272Z",
+      "version": "2026.2.1.1"
     },
     "IIU:eap": {
       "build": "262.9437.22",
