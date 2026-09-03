@@ -1,10 +1,10 @@
 {
   "products": {
     "CL:eap": {
-      "build": "262.8665.65",
+      "build": "263.3889.68",
       "rpm_name": "jetbrains-clion-eap",
-      "updated_at": "2026-07-02T22:55:42.311213Z",
-      "version": "2026.2"
+      "updated_at": "2026-09-03T13:48:56.829717Z",
+      "version": "2026.3"
     },
     "CL:release": {
       "build": "262.10315.131",
