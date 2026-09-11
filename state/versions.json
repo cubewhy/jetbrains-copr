@@ -109,9 +109,9 @@
       "version": "2026.2.2"
     },
     "RR:eap": {
-      "build": "263.3889.73",
+      "build": "263.4732.29",
       "rpm_name": "jetbrains-rustrover-eap",
-      "updated_at": "2026-09-04T12:09:16.240274Z",
+      "updated_at": "2026-09-11T12:11:37.238061Z",
       "version": "2026.3"
     },
     "RR:release": {
