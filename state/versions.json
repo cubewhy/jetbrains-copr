@@ -13,10 +13,10 @@
       "version": "2026.2.2"
     },
     "DG:eap": {
-      "build": "262.8377.45",
+      "build": "263.5153.34",
       "rpm_name": "jetbrains-datagrip-eap",
-      "updated_at": "2026-06-25T21:01:32.296430Z",
-      "version": "2026.2"
+      "updated_at": "2026-09-18T11:58:43.073325Z",
+      "version": "2026.3"
     },
     "DG:release": {
       "build": "262.10315.132",
