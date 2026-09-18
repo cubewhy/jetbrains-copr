@@ -67,10 +67,10 @@
       "version": "2026.3"
     },
     "PCP:release": {
-      "build": "262.10315.174",
+      "build": "262.10968.92",
       "rpm_name": "jetbrains-pycharm",
-      "updated_at": "2026-09-07T22:16:29.919968Z",
-      "version": "2026.2.2"
+      "updated_at": "2026-09-18T23:47:39.903666Z",
+      "version": "2026.2.3"
     },
     "PS:eap": {
       "build": "263.5153.42",
@@ -85,10 +85,10 @@
       "version": "2026.2.3"
     },
     "RD:eap": {
-      "build": "263.5153.35",
+      "build": "263.4732.36",
       "rpm_name": "jetbrains-rider-eap",
-      "updated_at": "2026-09-18T22:04:04.282476Z",
-      "version": "2026.3-EAP3"
+      "updated_at": "2026-09-14T23:29:07.136442Z",
+      "version": "2026.3-EAP2"
     },
     "RD:release": {
       "build": "262.10315.191",
